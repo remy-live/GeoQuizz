@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LearnDaily Atlas</title>
+    
+    <meta name="theme-color" content="#4361ee" id="meta-theme-color">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LearnDaily">
+    
+    <link rel="apple-touch-icon" href="https://placehold.co/512x512/4361ee/ffffff?text=LD">
+    <link rel="icon" type="image/png" href="https://placehold.co/512x512/4361ee/ffffff?text=LD">
+    <link id="manifest-placeholder" rel="manifest" href="">
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="v-home" class="view active">
+        <div class="header">
+            <div>
+                <h1>LearnDaily</h1>
+                <p class="subtitle">Mon Atlas Personnel</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="pwa-btn" class="nav-btn" onclick="installerPWA()" style="display: none; font-size: 1.5rem; padding: 5px; flex: none;" title="Installer l'app">📥</button>
+                <button class="nav-btn" onclick="openSettings()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Gérer mes Matières">⚙️</button>
+                <button id="theme-btn" class="nav-btn" onclick="toggleTheme()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Thème">🌙</button>
+            </div>
+        </div>
+
+        <div class="card" id="daily-card">
+            <h2>Mission du Jour 📅</h2>
+            <p class="subtitle" id="daily-info">Chargement...</p>
+            <button class="btn-primary" onclick="launchGame('daily')" style="margin-top: 15px; width: 100%;">Jouer la Mission</button>
+        </div>
+
+        <div class="card" id="infirmary-card" style="display: none; border: 2px solid var(--danger);">
+            <h2>L'Infirmerie 🚑</h2>
+            <p class="subtitle" id="infirmary-info">Des cartes ont besoin d'une piqûre.</p>
+            <button class="btn-primary" onclick="launchGame('infirmary')" style="margin-top: 15px; width: 100%; background: var(--danger);">Soigner les cartes</button>
+        </div>
+
+        <div class="card" id="learning-card">
+            <h2>Visite Guidée 🧭</h2>
+            <p class="subtitle">Le mode apprentissage : détends-toi et mémorise à ton rythme.</p>
+            <button class="btn-primary" onclick="launchGame('revision')" style="margin-top: 15px; width: 100%; background: var(--nature);">Démarrer la Visite</button>
+        </div>
+
+        <div class="card">
+            <h2>Entraînement Libre 🎯</h2>
+            <p class="subtitle">Joue sans limite sur les matières sélectionnées.</p>
+
+            <div style="margin-top: 15px;">
+                <p style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--muted);">Type de question</p>
+                <div class="radio-group">
+                    <label class="radio-card"><input type="radio" name="mode" value="locate" checked><span>Trouver 🔍</span></label>
+                    <label class="radio-card"><input type="radio" name="mode" value="identify"><span>Identifier 💡</span></label>
+                    <label class="radio-card"><input type="radio" name="mode" value="mix"><span>Mixte 🔀</span></label>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <p style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--muted);">Format</p>
+                <div class="radio-group">
+                    <label class="radio-card"><input type="radio" name="l-mode" value="10" checked><span>10 Q.</span></label>
+                    <label class="radio-card"><input type="radio" name="l-mode" value="survie"><span>Survie ❤️</span></label>
+                    <label class="radio-card"><input type="radio" name="l-mode" value="chrono"><span>Chrono ⏱️</span></label>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="launchGame('custom')" style="margin-top: 15px; width: 100%; background: var(--xp);">Lancer le Quiz Libre</button>
+        </div>
+    </div>
+
+    <div id="v-stats" class="view">
+        <div class="header"><div><h1>Progression</h1><p class="subtitle">Ton expertise globale</p></div></div>
+        
+        <div class="card player-profile">
+            <div class="level-badge" id="lvl-badge">1</div>
+            <div class="player-info">
+                <h3>Niveau <span id="lvl-text">1</span></h3>
+                <div class="xp-bar-container"><div class="xp-bar-fill" id="xp-bar" style="width: 0%;"></div></div>
+                <p class="subtitle" style="font-size:0.8rem; margin-top:4px;" id="xp-text">0/50 XP</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">🌍 Connaissances par domaine</div>
+            <div class="progress-item"><div class="progress-labels"><span>📍 Géographie (169)</span><span id="pct-geo">0%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-geo" style="width: 0%; background: var(--primary);"></div></div></div>
+            <div class="progress-item"><div class="progress-labels"><span>🗺️ Pays du Monde (750)</span><span id="pct-mon">0%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-mon" style="width: 0%; background: var(--world);"></div></div></div>
+            <div class="progress-item"><div class="progress-labels"><span>🌿 Botanique (20)</span><span id="pct-pla">0%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-pla" style="width: 0%; background: #10b981;"></div></div></div>
+            <div class="progress-item"><div class="progress-labels"><span>📜 Histoire (23)</span><span id="pct-his">0%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-his" style="width: 0%; background: var(--history);"></div></div></div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">🔥 Mon Activité (7 derniers jours)</div>
+            <div class="activity-chart" id="activity-chart"></div>
+        </div>
+
+  <div class="stat-card">
+            <div class="stat-header">🗺️ Mon Diagnostic Visuel</div>
+            <p class="subtitle" style="margin-bottom: 15px;">Touche les zones de couleur pour identifier tes faiblesses géographiques.</p>
+            
+            <div class="radio-group" style="margin-bottom: 15px;">
+                <label class="radio-card"><input type="radio" name="heatmap-mode" value="dep" checked onchange="changeHeatmap('dep')"><span>Départements</span></label>
+                <label class="radio-card"><input type="radio" name="heatmap-mode" value="reg" onchange="changeHeatmap('reg')"><span>Régions</span></label>
+                <label class="radio-card"><input type="radio" name="heatmap-mode" value="monde" onchange="changeHeatmap('monde')"><span>Monde</span></label>
+            </div>
+
+            <div style="width: 100%; aspect-ratio: 1/1; background: var(--ocean); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center;">
+                <svg id="heatmap-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;"></svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; color: var(--muted); margin-top: 10px;">
+                <span>🟩 Maîtrisé</span>
+                <span>⬜ Inexploré</span>
+                <span>🟥 À revoir</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">🚨 Top Erreurs à revoir</div>
+            <div id="top-fails-list" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+
+        <button class="btn-secondary" onclick="effacerDB()" style="background: rgba(244, 63, 94, 0.1); color: var(--danger); margin-top: 10px;">Tout réinitialiser (Danger)</button>
+    </div>
+
+    <div id="v-game" class="view">
+        <div class="top-bar">
+            <button class="nav-btn" onclick="quitGame()">🔙</button>
+            <div class="game-info">
+                <div class="title" id="game-title">JEU</div>
+                <div class="stats"><span id="q-counter"></span> • Score: <span id="score-val" style="color:var(--primary);font-weight:700;">0</span></div>
+            </div>
+            <div class="lives" id="lives-ui">❤️❤️❤️</div>
+        </div>
+
+        <div id="timer-ui" style="display: none; justify-content: center; align-items: center; background: var(--danger); color: white; padding: 5px; font-weight: 800; font-size: 1.2rem;">
+            ⏱️ <span id="timer-val">60</span>s
+        </div>
+
+        <div id="interface-texte" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 20px;">
+            <div class="card" style="width: 100%; text-align: center;">
+                <div class="date-badge" id="txt-date">1515</div>
+                <p id="text-prompt" style="font-size: 1.2rem; font-weight: 600; margin: 20px 0;">Texte de la question</p>
+                <div class="timeline" id="timeline-ui">
+                    <div class="t-period" id="tp-1">Antiquité</div>
+                    <div class="t-period" id="tp-2">Moyen Âge</div>
+                    <div class="t-period" id="tp-3">Renaissance</div>
+                    <div class="t-period" id="tp-4">Temps Modernes</div>
+                    <div class="t-period" id="tp-5">Époque Contemp.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="interface-image" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 20px; overflow: hidden;">
+            <div class="image-container" style="width: 100%; max-width: 400px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;">
+                <img id="botany-img" src="" alt="Question" style="width: 100%; height: auto; display: block; object-fit: cover; aspect-ratio: 4/3;">
+            </div>
+        </div>
+
+        <div id="interface-carte" class="interface-wrapper active" style="flex: 1; position: relative;">
+            <svg id="svg-carte" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+                <g id="map-group">
+                    <g id="g-world" style="display:none;"></g>
+                    <g id="g-france">
+                        <g id="g-regions"></g>
+                        <g id="g-departements"></g>
+                        <g id="g-regions-outlines"></g>
+                        <g id="g-nature"></g>
+                        <g id="g-villes"></g>
+                    </g>
+                    <g id="target-pointer" display="none">
+                        <circle cx="0" cy="0" r="12" fill="none" stroke="#f43f5e" stroke-width="3" stroke-dasharray="4 4" opacity="0.8">
+                            <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="4s" repeatCount="indefinite"/>
+                        </circle>
+                        <path d="M0 -4 L4 -12 L-4 -12 Z" fill="#f43f5e"/>
+                        <circle cx="0" cy="0" r="2" fill="#f43f5e"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <div class="question-panel" id="question-panel">
+            <h2 id="q-target">La cible</h2>
+            <p class="subtitle" id="q-question">La question</p>
+            <div class="hierarchy" id="q-hierarchy" style="display:none;">Contexte</div>
+            
+            <div class="flashcard-ui" id="flashcard-ui">
+                <button class="btn-primary" id="btn-reveal" onclick="revealAnswer()">Voir la réponse</button>
+                <div class="eval-buttons" id="eval-ui" style="display:none;">
+                    <button class="btn-eval fail" onclick="evaluateAnswer(false)">Je ne savais pas</button>
+                    <button class="btn-eval success" onclick="evaluateAnswer(true)">Je le savais</button>
+                </div>
+                <button class="btn-primary" id="btn-next" style="display:none; width: 100%; background: var(--world);" onclick="askQuestion()">Suivant ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-btn active" id="nav-home" onclick="switchTab('home')"><i>🏠</i>Hub</div>
+        <div class="nav-btn" id="nav-atlas" onclick="launchGame('atlas')"><i>🗺️</i>Atlas</div>
+        <div class="nav-btn" id="nav-stats" onclick="switchTab('stats')"><i>📈</i>Stats</div>
+    </div>
+
+    <div class="modal" id="settings-modal" style="display: none;">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px;">⚙️ Mes Matières</h2>
+            
+            <div class="checkbox-group">
+                <label class="master-checkbox"><input type="checkbox" id="m-opt-fr" onchange="toggleGroup('fr', this.checked)" checked> 🇫🇷 France</label>
+                <div class="children-checkboxes">
+                    <label><input type="checkbox" id="opt-reg" class="opt-child-fr" onchange="checkMaster('fr')" checked> Régions</label>
+                    <label><input type="checkbox" id="opt-dep" class="opt-child-fr" onchange="checkMaster('fr')" checked> Départements (Débloqués)</label>
+                    <label><input type="checkbox" id="opt-vil" class="opt-child-fr" onchange="checkMaster('fr')"> Villes (Toutes)</label>
+                    <label><input type="checkbox" id="opt-nat" class="opt-child-fr" onchange="checkMaster('fr')"> Fleuves & Massifs</label>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="master-checkbox"><input type="checkbox" id="m-opt-monde" onchange="toggleGroup('monde', this.checked)"> 🌍 Monde</label>
+                <div class="children-checkboxes">
+                    <label><input type="checkbox" id="opt-eur-pays" class="opt-child-monde" onchange="checkMaster('monde')"> Europe : Pays</label>
+                    <label><input type="checkbox" id="opt-eur-cap" class="opt-child-monde" onchange="checkMaster('monde')"> Europe : Capitales</label>
+                    <label><input type="checkbox" id="opt-monde-pays" class="opt-child-monde" onchange="checkMaster('monde')"> Monde : Pays</label>
+                    <label><input type="checkbox" id="opt-monde-cap" class="opt-child-monde" onchange="checkMaster('monde')"> Monde : Capitales</label>
+                    <label><input type="checkbox" id="opt-monde-flg" class="opt-child-monde" onchange="checkMaster('monde')"> Monde : Drapeaux</label>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="master-checkbox"><input type="checkbox" id="m-opt-cult" onchange="toggleGroup('cult', this.checked)"> 🧠 Culture Générale</label>
+                <div class="children-checkboxes">
+                    <label><input type="checkbox" id="opt-pla" class="opt-child-cult" onchange="checkMaster('cult')"> Botanique (Plantes)</label>
+                    <label><input type="checkbox" id="opt-his" class="opt-child-cult" onchange="checkMaster('cult')"> Frise Historique</label>
+                </div>
+            </div>
+
+            <button class="btn-secondary" onclick="toggleAll()" style="font-size: 0.8rem; margin-bottom: 20px;">Tout cocher / décocher</button>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" onclick="saveAndCloseSettings()" style="flex: 2;">Valider</button>
+                <button class="btn-secondary" onclick="closeSettings()" style="flex: 1;">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"><span style="font-size: 1.2rem;">🔔</span> <div id="toast-msg"></div></div>
+    <div id="xp-float" class="xp-float">+10 XP</div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
