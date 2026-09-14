@@ -22,3 +22,283 @@ const DATA_PLANTES = [
 const DATA_HISTOIRE = [
     { id: "h_terre", domaine: "histoire", type: "his", nom: "-4,5 Milliards d'années", contexte: "Formation de la Terre et du Système Solaire.", periode: 0 }, { id: "h_dino", domaine: "histoire", type: "his", nom: "-66 Millions d'années", contexte: "Extinction des dinosaures (Météorite).", periode: 0 }, { id: "h_sapiens", domaine: "histoire", type: "his", nom: "-300 000 ans", contexte: "Apparition d'Homo Sapiens en Afrique.", periode: 1 }, { id: "h_feu", domaine: "histoire", type: "his", nom: "-400 000 ans", contexte: "Maîtrise du feu par Homo Erectus.", periode: 1 }, { id: "h_agri", domaine: "histoire", type: "his", nom: "-10 000 ans", contexte: "Invention de l'agriculture (Révolution néolithique).", periode: 1 }, { id: "h_ecri", domaine: "histoire", type: "his", nom: "-3000 av. J.-C.", contexte: "Invention de l'écriture en Mésopotamie.", periode: 2 }, { id: "h_pyramide", domaine: "histoire", type: "his", nom: "-2500 av. J.-C.", contexte: "Construction de la Grande Pyramide de Gizeh.", periode: 2 }, { id: "h_rome", domaine: "histoire", type: "his", nom: "753 av. J.-C.", contexte: "Fondation mythique de la ville de Rome.", periode: 2 }, { id: "h_alesia", domaine: "histoire", type: "his", nom: "-52 av. J.-C.", contexte: "Vercingétorix dépose les armes à Alésia devant César.", periode: 2 }, { id: "h_chute_rome", domaine: "histoire", type: "his", nom: "476", contexte: "Chute de l'Empire Romain d'Occident.", periode: 3 }, { id: "h_clovis", domaine: "histoire", type: "his", nom: "496", contexte: "Baptême de Clovis, Roi des Francs.", periode: 3 }, { id: "h_charlemagne", domaine: "histoire", type: "his", nom: "25 Décembre 800", contexte: "Sacre de Charlemagne comme Empereur.", periode: 3 }, { id: "h_hastings", domaine: "histoire", type: "his", nom: "1066", contexte: "Guillaume le Conquérant remporte la bataille d'Hastings.", periode: 3 }, { id: "h_guerre100", domaine: "histoire", type: "his", nom: "1453", contexte: "Fin de la Guerre de Cent Ans.", periode: 3 }, { id: "h_colomb", domaine: "histoire", type: "his", nom: "1492", contexte: "Découverte de l'Amérique par Christophe Colomb.", periode: 4 }, { id: "h_imprimerie", domaine: "histoire", type: "his", nom: "1454", contexte: "Gutenberg invente l'imprimerie à caractères mobiles.", periode: 4 }, { id: "h_marignan", domaine: "histoire", type: "his", nom: "1515", contexte: "François Ier remporte la bataille de Marignan.", periode: 4 }, { id: "h_louis14", domaine: "histoire", type: "his", nom: "1661", contexte: "Début du règne personnel de Louis XIV.", periode: 4 }, { id: "h_revo", domaine: "histoire", type: "his", nom: "14 Juillet 1789", contexte: "Prise de la Bastille (Révolution Française).", periode: 5 }, { id: "h_empire", domaine: "histoire", type: "his", nom: "1804", contexte: "Sacre de Napoléon Ier Empereur des Français.", periode: 5 }, { id: "h_ww1", domaine: "histoire", type: "his", nom: "11 Novembre 1918", contexte: "Armistice de la Première Guerre Mondiale.", periode: 5 }, { id: "h_ww2", domaine: "histoire", type: "his", nom: "8 Mai 1945", contexte: "Capitulation de l'Allemagne (Fin de la Seconde Guerre Mondiale).", periode: 5 }, { id: "h_lune", domaine: "histoire", type: "his", nom: "21 Juillet 1969", contexte: "Neil Armstrong pose le premier pas sur la Lune.", periode: 5 }
 ];
+// ============================================================
+//   LES RÉGIONS DE CHAQUE DÉPARTEMENT
+//   (le GeoJSON ne donne que le code + le nom : on complète ici
+//    pour afficher un vrai contexte "département > région")
+// ============================================================
+
+const DEP_REGIONS = {
+    "01":"Auvergne-Rhône-Alpes", "03":"Auvergne-Rhône-Alpes", "07":"Auvergne-Rhône-Alpes", "15":"Auvergne-Rhône-Alpes", "26":"Auvergne-Rhône-Alpes", "38":"Auvergne-Rhône-Alpes", "42":"Auvergne-Rhône-Alpes", "43":"Auvergne-Rhône-Alpes", "63":"Auvergne-Rhône-Alpes", "69":"Auvergne-Rhône-Alpes", "73":"Auvergne-Rhône-Alpes", "74":"Auvergne-Rhône-Alpes",
+    "21":"Bourgogne-Franche-Comté", "25":"Bourgogne-Franche-Comté", "39":"Bourgogne-Franche-Comté", "58":"Bourgogne-Franche-Comté", "70":"Bourgogne-Franche-Comté", "71":"Bourgogne-Franche-Comté", "89":"Bourgogne-Franche-Comté", "90":"Bourgogne-Franche-Comté",
+    "22":"Bretagne", "29":"Bretagne", "35":"Bretagne", "56":"Bretagne",
+    "18":"Centre-Val de Loire", "28":"Centre-Val de Loire", "36":"Centre-Val de Loire", "37":"Centre-Val de Loire", "41":"Centre-Val de Loire", "45":"Centre-Val de Loire",
+    "2A":"Corse", "2B":"Corse",
+    "08":"Grand Est", "10":"Grand Est", "51":"Grand Est", "52":"Grand Est", "54":"Grand Est", "55":"Grand Est", "57":"Grand Est", "67":"Grand Est", "68":"Grand Est", "88":"Grand Est",
+    "02":"Hauts-de-France", "59":"Hauts-de-France", "60":"Hauts-de-France", "62":"Hauts-de-France", "80":"Hauts-de-France",
+    "75":"Île-de-France", "77":"Île-de-France", "78":"Île-de-France", "91":"Île-de-France", "92":"Île-de-France", "93":"Île-de-France", "94":"Île-de-France", "95":"Île-de-France",
+    "14":"Normandie", "27":"Normandie", "50":"Normandie", "61":"Normandie", "76":"Normandie",
+    "16":"Nouvelle-Aquitaine", "17":"Nouvelle-Aquitaine", "19":"Nouvelle-Aquitaine", "23":"Nouvelle-Aquitaine", "24":"Nouvelle-Aquitaine", "33":"Nouvelle-Aquitaine", "40":"Nouvelle-Aquitaine", "47":"Nouvelle-Aquitaine", "64":"Nouvelle-Aquitaine", "79":"Nouvelle-Aquitaine", "86":"Nouvelle-Aquitaine", "87":"Nouvelle-Aquitaine",
+    "09":"Occitanie", "11":"Occitanie", "12":"Occitanie", "30":"Occitanie", "31":"Occitanie", "32":"Occitanie", "34":"Occitanie", "46":"Occitanie", "48":"Occitanie", "65":"Occitanie", "66":"Occitanie", "81":"Occitanie", "82":"Occitanie",
+    "44":"Pays de la Loire", "49":"Pays de la Loire", "53":"Pays de la Loire", "72":"Pays de la Loire", "85":"Pays de la Loire",
+    "04":"Provence-Alpes-Côte d'Azur", "05":"Provence-Alpes-Côte d'Azur", "06":"Provence-Alpes-Côte d'Azur", "13":"Provence-Alpes-Côte d'Azur", "83":"Provence-Alpes-Côte d'Azur", "84":"Provence-Alpes-Côte d'Azur"
+};
+
+// ============================================================
+//   LES MOYENS MNÉMOTECHNIQUES
+//   Règle du jeu : on n'affiche une astuce QUE quand il existe
+//   une vraie logique derrière (une étymologie, une position,
+//   un enchaînement de dates...). Pas d'astuce inventée : si le
+//   nom n'a aucune logique, on n'affiche rien.
+// ============================================================
+
+// --- Départements : les exceptions à la règle alphabétique de 1790 ---
+// (pour tous les autres, l'astuce est générée automatiquement, voir getMnemoDep())
+const MNEMO_DEPS = {
+    "01": "L'Ain porte le n°1 tout simplement parce qu'il est le premier dans l'ordre alphabétique des départements de 1790.",
+    "06": "Les Alpes-Maritimes (06) et la Savoie (73/74) n'ont rejoint la France qu'en 1860 : on leur a donné le n° qui allait bien dans l'ordre alphabétique.",
+    "73": "Savoie (73) et Haute-Savoie (74) sont françaises depuis 1860 seulement : leurs n° se suivent, la Haute (les sommets et Annecy) au nord, la Savoie au sud.",
+    "74": "Savoie (73) et Haute-Savoie (74) sont françaises depuis 1860 seulement : leurs n° se suivent, la Haute (les sommets et Annecy) au nord, la Savoie au sud.",
+    "64": "Les trois Pyrénées se suivent d'ouest en est : 64 Atlantiques (l'océan), 65 Hautes (le milieu, le pic du Midi), 66 Orientales (la Méditerranée).",
+    "65": "Les trois Pyrénées se suivent d'ouest en est : 64 Atlantiques (l'océan), 65 Hautes (le milieu, le pic du Midi), 66 Orientales (la Méditerranée).",
+    "66": "Les trois Pyrénées se suivent d'ouest en est : 64 Atlantiques (l'océan), 65 Hautes (le milieu, le pic du Midi), 66 Orientales (la Méditerranée).",
+    "75": "Paris = 75, l'ancien n° du département de la Seine. Les n° 75 à 78 formaient le bloc des Seine : Seine, Seine-Inférieure, Seine-et-Marne, Seine-et-Oise.",
+    "76": "La Seine-Maritime s'appelait Seine-Inférieure : voilà pourquoi elle est rangée dans le bloc des Seine (75 à 78) et pas à la lettre M.",
+    "77": "La Seine-et-Marne a gardé son n° de 1790. Sa voisine, la Seine-et-Oise (78), est devenue les Yvelines en 1968.",
+    "78": "Les Yvelines s'appelaient Seine-et-Oise : d'où leur place entre la Seine-et-Marne (77) et les Deux-Sèvres (79), alors que le nom commence par Y.",
+    "79": "Les Deux-Sèvres sont classés à la lettre S (Sèvres), pas à D : voilà pourquoi ils suivent la Seine-et-Oise, devenue les Yvelines (78).",
+    "89": "L'Yonne (89) ferme l'ordre alphabétique de 1790. Tout ce qui suit a été créé plus tard : 90 en 1922, puis 91 à 95 en 1968.",
+    "90": "Le Territoire de Belfort (90) est le seul bout d'Alsace resté français en 1871 : créé à part, il a pris le n° suivant, hors ordre alphabétique.",
+    "91": "Les n° 91 à 95 sont hors alphabet : ils datent de 1968, quand la Seine et la Seine-et-Oise ont été découpées. 91 Essonne = la grande couronne au sud.",
+    "92": "La petite couronne tourne autour de Paris dans le sens des aiguilles d'une montre : 92 à l'ouest (Hauts-de-Seine), 93 au nord-est, 94 au sud-est.",
+    "93": "La petite couronne tourne autour de Paris dans le sens des aiguilles d'une montre : 92 à l'ouest, 93 au nord-est (Seine-Saint-Denis), 94 au sud-est.",
+    "94": "La petite couronne tourne autour de Paris dans le sens des aiguilles d'une montre : 92 à l'ouest, 93 au nord-est, 94 au sud-est (Val-de-Marne).",
+    "95": "Val-d'Oise (95) : le nom donne la position, c'est la vallée de l'Oise, au nord-ouest de Paris. Créé en 1968 comme les 91 à 94.",
+    "2A": "La Corse était le n°20, coupé en deux en 1976 : 2A Corse-du-Sud (A comme Ajaccio), 2B Haute-Corse (B comme Bastia).",
+    "2B": "La Corse était le n°20, coupé en deux en 1976 : 2A Corse-du-Sud (A comme Ajaccio), 2B Haute-Corse (B comme Bastia)."
+};
+
+// --- Régions : leur nom est presque toujours une boussole ---
+const MNEMO_REGIONS = {
+    "Île-de-France": "Une île entourée de rivières : la Seine, la Marne et l'Oise dessinent ses contours autour de Paris.",
+    "Hauts-de-France": "Le nom est une boussole : les Hauts, c'est tout en haut de la carte.",
+    "Normandie": "Normand vient de Nordmann, l'homme du Nord : les Vikings qui ont remonté la Seine et obtenu ces terres en 911.",
+    "Bretagne": "La pointe de l'ouest, peuplée par les Bretons venus de (Grande-)Bretagne : même nom, même peuple, des deux côtés de la Manche.",
+    "Pays de la Loire": "Le nom donne la réponse : la portion de Loire juste avant l'océan, celle qui se termine à Nantes.",
+    "Centre-Val de Loire": "Au centre de la carte, dans le val (la vallée) de la Loire : c'est la région des châteaux.",
+    "Grand Est": "Une boussole encore : tout à l'est. Elle réunit l'Alsace, la Lorraine et la Champagne-Ardenne.",
+    "Bourgogne-Franche-Comté": "Franche-Comté = le comté franc, c'est-à-dire libre d'impôts. Elle s'adosse au Jura, la Bourgogne est côté vignes.",
+    "Nouvelle-Aquitaine": "Aquitaine vient d'aqua, l'eau : la plus grande région de France, tout le long de l'Atlantique.",
+    "Occitanie": "Le pays de la langue d'oc, où l'on disait oc pour dire oui : de Toulouse aux plages de la Méditerranée.",
+    "Auvergne-Rhône-Alpes": "Le nom liste le relief d'ouest en est : les volcans d'Auvergne, puis la vallée du Rhône, puis les Alpes.",
+    "Provence-Alpes-Côte d'Azur": "PACA, le seul coin de France qui a les Alpes ET la mer, dans le même nom et sur la même carte.",
+    "Corse": "La seule région insulaire : l'Île de Beauté. 2A au sud (Ajaccio), 2B au nord (Bastia)."
+};
+
+// --- Villes : le lien logique entre la ville et son département ---
+const MNEMO_VILLES = {
+    "v_paris": "Paris est à la fois une ville et un département (75) : le seul cas en France.",
+    "v_marseille": "Marseille garde l'embouchure du Rhône : son département s'appelle les Bouches-du-Rhône (13).",
+    "v_lyon": "Lyon est née au confluent du Rhône et de la Saône : son département porte le nom du fleuve, le Rhône (69).",
+    "v_toulouse": "La ville rose est sur la Garonne, en amont de Bordeaux : donc la HAUTE-Garonne (31).",
+    "v_nice": "Nice, c'est là où les Alpes plongent dans la mer : Alpes-Maritimes (06).",
+    "v_nantes": "Nantes, c'est la Loire juste avant l'Atlantique : Loire-Atlantique (44).",
+    "v_montpellier": "Montpellier est la capitale de l'Hérault (34), le fleuve qui descend des Cévennes à la mer.",
+    "v_strasbourg": "Le Rhin descend du sud vers le nord : Strasbourg est en aval, donc dans le BAS-Rhin (67).",
+    "v_bordeaux": "Bordeaux est au bord de la Garonne, juste avant l'estuaire de la Gironde qui donne son nom au département (33).",
+    "v_lille": "La ville la plus au nord des grandes villes françaises, dans le département du Nord (59), le plus peuplé de France.",
+    "v_rennes": "Rennes est née au confluent de l'Ille et de la Vilaine : les deux rivières donnent le nom du département (35).",
+    "v_reims": "Reims, la capitale du champagne, est dans la Marne (51) : champagne et Marne vont ensemble.",
+    "v_toulon": "Toulon, le grand port militaire, est dans le Var (83)... alors que la rivière Var, elle, coule dans les Alpes-Maritimes. Un piège classique.",
+    "v_stetienne": "Saint-Étienne est dans le département de la Loire (42), au sud de Lyon : le fleuve passe juste à côté, bien avant d'arriver à Nantes.",
+    "v_lehavre": "Le Havre veut dire le port : celui de l'embouchure de la Seine, donc Seine-Maritime (76).",
+    "v_grenoble": "Grenoble, la capitale des Alpes, est posée sur l'Isère (38) au milieu des montagnes.",
+    "v_dijon": "Dijon et sa moutarde sont dans la Côte-d'Or (21) : la côte des grands vins de Bourgogne.",
+    "v_angers": "À Angers, la Maine se jette dans la Loire : d'où le Maine-et-Loire (49).",
+    "v_nimes": "Nîmes et son pont du Gard : le département s'appelle tout simplement le Gard (30).",
+    "v_villeurbanne": "Villeurbanne est collée à Lyon : forcément le même département, le Rhône (69).",
+    "v_lemans": "Le Mans et ses 24 Heures sont sur la Sarthe (72).",
+    "v_aix": "Aix-en-Provence est la voisine de Marseille : même département, les Bouches-du-Rhône (13).",
+    "v_clermont": "Clermont-Ferrand est au pied du puy de Dôme : le volcan donne son nom au département (63).",
+    "v_brest": "Brest est tout au bout de la Bretagne : Finistère vient de Finis Terrae, la fin de la terre (29).",
+    "v_tours": "Tours est entre l'Indre et la Loire : le département dit exactement où elle se trouve (37).",
+    "v_amiens": "Amiens est sur la Somme (80), le fleuve de la bataille de 1916.",
+    "v_limoges": "Limoges et sa porcelaine sont sur la Vienne, en amont : donc HAUTE-Vienne (87). Poitiers, en aval, est dans la Vienne (86).",
+    "v_annecy": "Annecy et son lac sont au nord de la Savoie, côté Genève : Haute-Savoie (74).",
+    "v_perpignan": "Perpignan la catalane est à l'extrémité est des Pyrénées : Pyrénées-Orientales (66).",
+    "v_boulogne": "Boulogne-Billancourt est à l'ouest de Paris : la petite couronne commence à l'ouest avec le 92, les Hauts-de-Seine.",
+    "v_metz": "Metz est sur la Moselle (57). Nancy, plus au sud, est en Meurthe-et-Moselle (54) : deux rivières, deux départements voisins.",
+    "v_besancon": "Besançon est enfermée dans une boucle du Doubs (25) : la rivière fait le tour de la vieille ville.",
+    "v_orleans": "Orléans est dans le Loiret (45) : le Loiret est une petite rivière née de la Loire elle-même.",
+    "v_argenteuil": "Argenteuil est au nord-ouest de Paris, dans la vallée de l'Oise : Val-d'Oise (95).",
+    "v_rouen": "Rouen est sur la Seine, en aval : comme Le Havre, elle est en Seine-Maritime (76).",
+    "v_montreuil": "Montreuil est à l'est de Paris, dans le 93 (Seine-Saint-Denis), le département de la petite couronne au nord-est.",
+    "v_mulhouse": "Mulhouse est au sud de l'Alsace, en amont sur le Rhin : donc HAUT-Rhin (68), à l'inverse de Strasbourg (Bas-Rhin).",
+    "v_caen": "Caen, la ville de Guillaume le Conquérant, est dans le Calvados (14) : comme l'eau-de-vie de pomme normande.",
+    "v_nancy": "Nancy est en Meurthe-et-Moselle (54) : deux rivières dans le nom, alors que Metz, plus au nord, n'a que la Moselle (57).",
+    "v_roubaix": "Roubaix est collée à Lille : même département, le Nord (59).",
+    "v_tourcoing": "Tourcoing est la jumelle de Roubaix, à la frontière belge : Nord (59).",
+    "v_nanterre": "Nanterre est le chef-lieu des Hauts-de-Seine (92), le département à l'ouest de Paris (celui de La Défense).",
+    "v_vitry": "Vitry-sur-Seine est au sud-est de Paris : Val-de-Marne (94), le département de la vallée de la Marne.",
+    "v_creteil": "Créteil est le chef-lieu du Val-de-Marne (94), au sud-est de Paris.",
+    "v_avignon": "Avignon, la cité des Papes, est dans le Vaucluse (84) : Vallis Clausa, la vallée fermée de Fontaine-de-Vaucluse.",
+    "v_poitiers": "Poitiers est dans la Vienne (86) ; Limoges, en amont sur la même rivière, est en Haute-Vienne (87).",
+    "v_aubervilliers": "Aubervilliers est juste au nord de Paris : Seine-Saint-Denis (93).",
+    "v_dunkerque": "Dunkerque est le port le plus au nord de France : département du Nord (59). Son nom veut dire l'église des dunes en flamand.",
+    "v_asnieres": "Asnières-sur-Seine est dans la boucle de la Seine au nord-ouest de Paris : Hauts-de-Seine (92).",
+    "v_versailles": "Versailles, le château de Louis XIV, est le chef-lieu des Yvelines (78), à l'ouest de Paris."
+};
+
+// --- Fleuves et massifs ---
+const MNEMO_NATURE = {
+    "n_loire": "Loire comme LONGUE : c'est le plus long fleuve de France. Elle part du Massif central, monte vers Orléans, puis redescend vers l'ouest en dessinant un grand arc.",
+    "n_seine": "Suis la Seine d'amont en aval : Paris, Rouen, Le Havre. Elle finit dans la Manche, et les deux départements qu'elle traverse à la fin portent son nom.",
+    "n_rhone": "Le seul grand fleuve français qui descend vers le SUD : il vient des Alpes suisses, passe à Lyon et se jette dans la Méditerranée.",
+    "n_garonne": "La Garonne descend des Pyrénées vers l'Atlantique : Toulouse (Haute-Garonne) puis Bordeaux (Gironde), les deux départements racontent son trajet.",
+    "n_rhin": "Le Rhin, c'est la frontière avec l'Allemagne, donc tout à l'est. Il coule vers le nord : en amont le Haut-Rhin (Mulhouse), en aval le Bas-Rhin (Strasbourg).",
+    "n_alpes": "Les Alpes : les plus HAUTES et les plus à l'est, avec le mont Blanc (4809 m). A comme Altitude.",
+    "n_pyrenees": "Les Pyrénées ferment la France au sud-ouest comme une barrière : c'est la frontière avec l'Espagne, de l'Atlantique (Pays basque) à la Méditerranée (Perpignan).",
+    "n_massif": "Le nom dit tout : au CENTRE de la carte. C'est le plus vieux relief, usé et arrondi, hérissé de volcans éteints.",
+    "n_jura": "Le Jura a donné son nom au Jurassique : c'est le massif calcaire entre les Alpes et les Vosges, le long de la frontière suisse.",
+    "n_vosges": "Les Vosges sont le mur à l'ouest de l'Alsace. Leurs sommets arrondis s'appellent des ballons (le Ballon d'Alsace) : Vosges = sommets ronds, Alpes = sommets pointus."
+};
+
+// --- Histoire : des dates qui s'accrochent les unes aux autres ---
+const MNEMO_HISTOIRE = {
+    "h_terre": "4,5 milliards d'années : la Terre a environ un tiers de l'âge de l'Univers (13,8 milliards).",
+    "h_dino": "66 millions d'années : retiens le double 6. Les dinosaures disparaissent, et les mammifères prennent la place laissée vide.",
+    "h_sapiens": "L'ordre compte plus que le chiffre : Erectus maîtrise le feu (-400 000), PUIS Sapiens apparaît (-300 000). Le feu est plus vieux que nous.",
+    "h_feu": "Le feu (-400 000) est plus ancien que Homo Sapiens (-300 000) : quand nous arrivons, la recette existe déjà.",
+    "h_agri": "-10 000 : la dernière glaciation se termine. L'homme peut enfin cultiver, donc se poser : l'agriculture crée les villages.",
+    "h_ecri": "L'écriture (-3000) est LA frontière : avant, c'est la Préhistoire ; après, l'Histoire. Pas d'écrits, pas d'Histoire.",
+    "h_pyramide": "Quand Rome est fondée (-753), la pyramide de Khéops a déjà plus de 1700 ans : l'Égypte est vieille même pour les Romains.",
+    "h_rome": "753 avant J.-C. : 7, 5, 3, les chiffres impairs qui descendent. Romulus et Rémus.",
+    "h_alesia": "-52 comme les 52 semaines de l'année. César envahit la Gaule en -58, Vercingétorix se rend 6 ans plus tard.",
+    "h_chute_rome": "476 : la chute de Rome ouvre le Moyen Âge. Retiens le duo 476 (Rome tombe) / 496 (Clovis baptisé), 20 ans d'écart.",
+    "h_clovis": "496 : vingt ans après la chute de Rome (476), Clovis se fait baptiser à Reims. C'est là que commencent les rois de France.",
+    "h_charlemagne": "L'an 800, un chiffre bien rond, à Noël : Charlemagne (Carolus Magnus, Charles le Grand) devient le premier empereur d'Occident depuis 476.",
+    "h_hastings": "1066 : 10-66. Guillaume, duc de Normandie, traverse la Manche. Toute l'histoire est brodée sur la tapisserie de Bayeux.",
+    "h_guerre100": "1453, une seule date pour deux fins : Constantinople tombe ET la guerre de Cent Ans s'achève. C'est la fin du Moyen Âge.",
+    "h_colomb": "1492 : 14-92. Colomb cherche les Indes par l'ouest et bute sur l'Amérique. Juste avant Marignan (1515), facile à enchaîner.",
+    "h_imprimerie": "L'imprimerie arrive avant l'Amérique : l'Europe apprend à imprimer (milieu du XVe) juste avant de découvrir le Nouveau Monde (1492).",
+    "h_marignan": "Le grand classique de l'école : Marignan, 1515. Deux fois quinze, impossible à oublier. François Ier a 20 ans et vient d'être sacré.",
+    "h_louis14": "1661 : Mazarin meurt, Louis XIV décide de gouverner seul, sans Premier ministre. Versailles viendra après.",
+    "h_revo": "1789 : 1-7-8-9, trois chiffres qui se suivent. Le 14 juillet est resté la fête nationale.",
+    "h_empire": "1789 la Révolution, 1804 l'Empire : 15 ans plus tard, le même pays qui a chassé son roi se donne un empereur.",
+    "h_ww1": "Les trois 11 : le 11e jour du 11e mois, à 11 heures, en 1918.",
+    "h_ww2": "1939 + 6 ans de guerre = 1945. Le 8 mai en Europe, le 2 septembre dans le Pacifique.",
+    "h_lune": "1969 : Apollo 11, huit ans après le défi lancé par Kennedy (1961). Retiens 69, l'année où l'homme marche sur la Lune."
+};
+
+// --- Botanique : la famille se devine au latin ou à un détail ---
+const MNEMO_FAMILLES = {
+    "Fagacées": "Fagus = le hêtre en latin. Les Fagacées sont les arbres dont le fruit est logé dans une cupule : le gland du chêne, la faîne du hêtre.",
+    "Bétulacées": "Betula = le bouleau. C'est la famille des arbres à chatons souples, typiques des sols pauvres et des pays froids.",
+    "Platanacées": "Une famille pour une seule star : le platane, reconnaissable à son écorce qui tombe en plaques.",
+    "Oléacées": "Oleum = l'huile. La famille de l'olivier, donc de l'huile d'olive.",
+    "Pinacées": "La famille des conifères : des aiguilles et des cônes (les pommes de pin). Sapin, pin, épicéa, mélèze.",
+    "Astéracées": "Aster = étoile. Ce qu'on prend pour une fleur est en fait un capitule, des centaines de minuscules fleurs serrées en étoile.",
+    "Papavéracées": "Papaver = le pavot. Le coquelicot est un pavot rouge, avec des pétales froissés comme du papier de soie.",
+    "Liliacées": "La famille du lys (lilium) : des fleurs à bulbe, avec 6 pétales et des feuilles allongées.",
+    "Lamiacées": "Le truc infaillible : roule la tige entre tes doigts, elle est CARRÉE, et la feuille sent bon. Ce sont les aromates : thym, romarin, menthe, basilic, lavande.",
+    "Urticacées": "Urtica a donné urticaire : c'est la famille qui pique.",
+    "Araliacées": "La famille du lierre : des plantes grimpantes ou en buisson, à feuilles persistantes et à fruits en petites boules.",
+    "Polypodiacées": "Poly-pode = beaucoup de pieds. Les fougères n'ont ni fleur ni graine : elles se reproduisent par spores, sous les feuilles."
+};
+
+// --- Botanique : quelques plantes ont leur propre astuce ---
+const MNEMO_PLANTES = {
+    "p_chene": "Chêne = gland, hêtre = faîne : deux Fagacées, deux fruits dans une cupule. Le chêne a des feuilles à lobes arrondis.",
+    "p_bouleau": "Le seul arbre à l'écorce blanche qui se décolle en fines bandes de papier.",
+    "p_platane": "Son écorce tombe en plaques et forme un camouflage : c'est l'arbre des places de village et des allées.",
+    "p_olivier": "Oleum = huile : l'olivier donne l'huile d'olive. Feuilles vert-gris, argentées dessous, pour résister à la sécheresse.",
+    "p_sapin": "Sapin : aiguilles plates et cônes DRESSÉS vers le ciel. L'épicéa, lui, laisse pendre ses cônes vers le bas.",
+    "p_pissenlit": "Pissenlit = pisse-en-lit : la plante est diurétique. Sa fleur jaune se transforme en boule de graines à souffler.",
+    "p_coquelicot": "Papaver = pavot : le coquelicot est le pavot des champs, pétales rouges froissés comme du papier de soie.",
+    "p_tournesol": "Tournesol : jeune, son capitule suit vraiment la course du soleil. Adulte, il se fige face à l'est.",
+    "p_muguet": "Le muguet du 1er mai : clochettes blanches parfumées... et petites baies rouges toxiques à ne jamais goûter.",
+    "p_tulipe": "Tulipe : un bulbe et 6 pétales, comme les lys. C'est elle qui a provoqué la première bulle spéculative de l'histoire, en Hollande en 1637.",
+    "p_ortie": "Urtica a donné urticaire : l'ortie pique avec de minuscules poils qui se cassent sur la peau.",
+    "p_lierre": "Le lierre s'accroche avec des crampons mais ne pompe rien à l'arbre : ce n'est pas un parasite, juste un passager.",
+    "p_fougère": "Ni fleur ni graine : retourne une feuille, tu verras les points bruns (les sores) qui libèrent les spores."
+};
+
+// ============================================================
+//   LE MONDE (clés = code ISO à 3 lettres, comme dans les id
+//   cap_XXX, fl_XXX et w_XXX générés depuis l'API)
+// ============================================================
+
+// --- Capitales : surtout les pièges, là où ce n'est PAS la plus grande ville ---
+const MNEMO_CAPITALES = {
+    "CHE": "Berne, ni Zurich ni Genève : la Suisse a choisi une ville moyenne pour ne froisser personne. Berne = l'ours (Bär) de son blason.",
+    "CAN": "Ottawa, ni Toronto ni Montréal : c'est le compromis choisi entre le Canada anglophone et le Canada francophone.",
+    "AUS": "Canberra, ni Sydney ni Melbourne : une ville créée de toutes pièces en 1913 pour départager les deux rivales.",
+    "USA": "Washington, pas New York. D.C. = District of Columbia, un district neutre créé entre le Nord et le Sud, qui n'appartient à aucun État.",
+    "BRA": "Brasilia, ni Rio ni São Paulo : une capitale construite en 1960 en plein centre du pays pour attirer les habitants vers l'intérieur.",
+    "TUR": "Ankara, pas Istanbul : Atatürk a déplacé la capitale au centre de l'Anatolie en 1923, loin de l'ancienne Constantinople.",
+    "NZL": "Wellington, pas Auckland : elle est au centre du pays, pile entre l'île du Nord et l'île du Sud.",
+    "ZAF": "L'Afrique du Sud a trois capitales : Pretoria (le gouvernement), Le Cap (le parlement), Bloemfontein (la justice).",
+    "NGA": "Abuja, pas Lagos : capitale déplacée au centre du pays en 1991, pour être à égale distance du nord et du sud.",
+    "NLD": "Amsterdam est la capitale officielle, mais c'est à La Haye que siègent le gouvernement, le roi et la Cour internationale.",
+    "MAR": "Rabat, pas Casablanca : Casa est la capitale économique, Rabat la capitale politique.",
+    "PAK": "Islamabad, pas Karachi : une ville neuve des années 1960, construite au nord près de Rawalpindi.",
+    "IND": "New Delhi (le quartier administratif de Delhi), pas Bombay : le nom contient New, comme une ville dessinée exprès par les Britanniques.",
+    "BEL": "Bruxelles : capitale de la Belgique ET siège des institutions européennes et de l'OTAN.",
+    "CIV": "Yamoussoukro est la capitale officielle depuis 1983 (la ville natale du président Houphouët-Boigny), mais Abidjan reste la grande ville.",
+    "TZA": "Dodoma, pas Dar es Salaam : la capitale a été déplacée au centre du pays, loin de la côte.",
+    "BOL": "La Bolivie a deux capitales : Sucre est la capitale constitutionnelle, La Paz le siège du gouvernement (et la plus haute du monde).",
+    "CHN": "Pékin (Beijing) = la capitale du NORD : bei = nord, jing = capitale. Nankin (Nanjing) était la capitale du sud.",
+    "JPN": "Tokyo = la capitale de l'EST. Avant, c'était Kyoto : les deux mêmes syllabes, simplement inversées.",
+    "ESP": "Madrid est pile au centre de l'Espagne : c'est le kilomètre zéro du pays, toutes les routes en partent en étoile.",
+    "VNM": "Hanoï est au nord, pas Hô Chi Minh-Ville (l'ancienne Saïgon) au sud : c'est le Nord qui a gagné la guerre, donc c'est lui qui garde la capitale."
+};
+
+// --- Drapeaux : surtout les paires qui se ressemblent ---
+const MNEMO_DRAPEAUX = {
+    "NLD": "Pays-Bas et Luxembourg : mêmes bandes rouge-blanc-bleu. Le Luxembourg a un bleu plus clair et un drapeau plus allongé.",
+    "LUX": "Luxembourg et Pays-Bas : mêmes bandes rouge-blanc-bleu, mais le bleu du Luxembourg est plus CLAIR (bleu ciel).",
+    "ROU": "Roumanie et Tchad ont le même bleu-jaune-rouge vertical. Le bleu du Tchad est plus foncé, presque indigo.",
+    "TCD": "Tchad et Roumanie sont quasi identiques : le Tchad a le bleu le plus FONCÉ des deux.",
+    "IDN": "Indonésie : ROUGE en haut, blanc en bas. La Pologne, c'est l'inverse (blanc en haut). Monaco a le même que l'Indonésie, en plus trapu.",
+    "POL": "Pologne : BLANC en haut, rouge en bas. L'Indonésie et Monaco font l'inverse.",
+    "MCO": "Monaco a le même drapeau que l'Indonésie (rouge sur blanc), mais plus court et plus large.",
+    "IRL": "Irlande : le VERT est côté mât (vert-blanc-orange). La Côte d'Ivoire, c'est l'inverse : orange côté mât.",
+    "CIV": "Côte d'Ivoire : l'ORANGE est côté mât. L'Irlande, c'est le miroir : vert côté mât.",
+    "RUS": "Le tricolore slave blanc-bleu-rouge SANS blason, c'est la Russie. Avec un blason, c'est la Slovaquie ou la Slovénie.",
+    "SVK": "Slovaquie : tricolore slave + blason avec la double croix sur trois collines, placé vers le mât.",
+    "SVN": "Slovénie : tricolore slave + blason avec le mont Triglav, la plus haute montagne du pays.",
+    "AUT": "Autriche : rouge-blanc-rouge avec trois bandes ÉGALES. La Lettonie a un rouge plus sombre et une bande blanche plus fine.",
+    "LVA": "Lettonie : rouge foncé (presque carmin) et bande blanche étroite. L'Autriche est rouge vif avec des bandes égales.",
+    "AUS": "Australie : 6 étoiles BLANCHES (dont la grande à 7 branches pour les États). La Nouvelle-Zélande n'en a que 4, et elles sont ROUGES.",
+    "NZL": "Nouvelle-Zélande : 4 étoiles ROUGES (la Croix du Sud). L'Australie en a 6, blanches.",
+    "DNK": "Toutes les croix nordiques sont décalées vers le mât. Danemark : croix blanche sur rouge, c'est le plus vieux drapeau du monde encore utilisé.",
+    "SWE": "Croix nordique jaune sur bleu : les couleurs de la Suède (comme les meubles suédois).",
+    "NOR": "Norvège : la croix bleue est posée DANS une croix blanche, sur fond rouge. C'est la seule croix nordique à deux couleurs.",
+    "FIN": "Finlande : croix bleue sur blanc. Le bleu des lacs sur la neige, la plus sobre des croix nordiques.",
+    "ISL": "Islande : croix rouge dans une croix blanche, sur fond BLEU. C'est la Norvège avec les couleurs inversées.",
+    "CHE": "La Suisse et le Vatican sont les deux seuls drapeaux CARRÉS. Croix blanche sur rouge : la Croix-Rouge en a pris l'inverse exact.",
+    "NPL": "Le Népal est le seul drapeau non rectangulaire du monde : deux fanions triangulaires superposés, avec la lune et le soleil.",
+    "USA": "50 étoiles = les 50 États d'aujourd'hui ; 13 bandes = les 13 colonies du départ.",
+    "GBR": "L'Union Jack superpose trois croix : celle d'Angleterre (rouge droite), d'Écosse (blanche en X) et d'Irlande (rouge en X).",
+    "CAN": "La feuille d'érable entre deux bandes rouges : le rouge des deux océans, l'érable au milieu, comme le pays.",
+    "BRA": "Ordem e Progresso sur un ciel étoilé : les étoiles reproduisent le ciel de Rio le jour de la proclamation de la République.",
+    "JPN": "Le disque rouge du soleil levant : le nom même du Japon, Nippon, veut dire origine du soleil.",
+    "TUR": "Croissant et étoile rouge et blanc : l'héritage ottoman, repris ensuite par beaucoup de pays musulmans."
+};
+
+// --- Pays : formes et positions faciles à retenir ---
+const MNEMO_PAYS = {
+    "ITA": "La botte ! Talon à l'est (les Pouilles), pointe au sud-ouest (la Calabre) qui shoote dans le ballon : la Sicile.",
+    "CHL": "Le pays le plus long et le plus fin du monde : un ruban de 4300 km coincé entre les Andes et le Pacifique.",
+    "NOR": "Tout en haut à gauche de l'Europe : une côte déchiquetée par les fjords, posée sur le dos de la Suède.",
+    "PRT": "Le Portugal est la bande verticale à gauche de l'Espagne, entièrement tournée vers l'Atlantique.",
+    "RUS": "Le plus grand pays du monde : 11 fuseaux horaires. Quand on se lève à Moscou, on se couche déjà au Kamtchatka.",
+    "NLD": "Pays-Bas = pays BAS : un quart du territoire est sous le niveau de la mer, gagné sur l'eau avec des digues.",
+    "ISL": "L'Islande est l'île isolée en haut de l'Atlantique, entre le Groenland et la Norvège : ne la confonds pas avec l'Irlande, collée à l'Angleterre.",
+    "IRL": "L'Irlande est la grande île à GAUCHE de la Grande-Bretagne. L'Islande est bien plus au nord, toute seule.",
+    "CHE": "La Suisse est enclavée au centre des Alpes, sans accès à la mer, entourée par la France, l'Allemagne, l'Autriche et l'Italie.",
+    "EGY": "L'Égypte est à cheval sur deux continents : le Nil et le désert en Afrique, le Sinaï déjà en Asie, séparés par le canal de Suez.",
+    "TUR": "La Turquie enjambe le Bosphore : un pied en Europe (Istanbul), tout le reste en Asie.",
+    "IDN": "L'Indonésie est un chapelet de plus de 17 000 îles étalé sur l'équateur, entre l'Asie et l'Australie.",
+    "CAN": "Le deuxième plus grand pays du monde, mais presque tous ses habitants vivent dans la bande collée à la frontière des États-Unis."
+};

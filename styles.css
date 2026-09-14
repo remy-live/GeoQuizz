@@ -239,3 +239,22 @@ svg#svg-carte { width: 100%; height: 100%; touch-action: none; }
 /* --- HEATMAP STATS --- */
 .heatmap-path { stroke: var(--map-stroke); stroke-width: 0.8px; cursor: pointer; transition: 0.2s; vector-effect: non-scaling-stroke; }
 .heatmap-path:hover { filter: brightness(0.85); transform: scale(1.01); transform-origin: center;}
+/* L'ASTUCE MNÉMOTECHNIQUE (le petit post-it jaune sous la réponse) */
+.mnemo {
+    font-size: 12px; line-height: 1.45; color: var(--text); text-align: left;
+    background: rgba(245, 158, 11, 0.12); border: 1px dashed rgba(245, 158, 11, 0.6);
+    border-radius: 10px; padding: 10px 12px; margin-top: 10px; width: 100%;
+    max-height: 22vh; overflow-y: auto; font-weight: 500; cursor: pointer;
+    animation: fadeIn 0.3s ease;
+}
+.mnemo b { color: var(--warning); }
+[data-theme="dark"] .mnemo { background: rgba(245, 158, 11, 0.1); }
+
+/* LA ZONE DE LECTURE : barre de temps restant + bouton Suivant */
+.read-zone { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 12px; }
+.read-track { width: 100%; height: 5px; background: var(--border-light); border-radius: 5px; overflow: hidden; }
+[data-theme="dark"] .read-track { background: #334155; }
+.read-fill { height: 100%; width: 100%; background: var(--success); border-radius: 5px; transition: width 0.05s linear; }
+.read-fill.paused { background: var(--warning); }
+.read-hint { font-size: 11px; color: var(--muted); font-weight: 600; }
+.btn-continue { width: 100%; background: var(--success); padding: 12px; }

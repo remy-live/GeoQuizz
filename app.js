@@ -44,7 +44,8 @@ function saveSettings() {
     const s = { 
         reg: document.getElementById('opt-reg').checked, dep: document.getElementById('opt-dep').checked, vil: document.getElementById('opt-vil').checked, nat: document.getElementById('opt-nat').checked,
         eurPays: document.getElementById('opt-eur-pays').checked, eurCap: document.getElementById('opt-eur-cap').checked, mondePays: document.getElementById('opt-monde-pays').checked, mondeFlg: document.getElementById('opt-monde-flg').checked, mondeCap: document.getElementById('opt-monde-cap').checked,
-        pla: document.getElementById('opt-pla').checked, his: document.getElementById('opt-his').checked
+        pla: document.getElementById('opt-pla').checked, his: document.getElementById('opt-his').checked,
+        readSpeed: getReadingSpeed()
     }; 
     localStorage.setItem('LearnSettings_v29', JSON.stringify(s)); 
     refreshDailyInfo();
@@ -57,6 +58,7 @@ function loadSettings() {
         if(s.reg !== undefined) document.getElementById('opt-reg').checked = s.reg; if(s.dep !== undefined) document.getElementById('opt-dep').checked = s.dep; if(s.vil !== undefined) document.getElementById('opt-vil').checked = s.vil; if(s.nat !== undefined) document.getElementById('opt-nat').checked = s.nat;
         if(s.eurPays !== undefined) document.getElementById('opt-eur-pays').checked = s.eurPays; if(s.eurCap !== undefined) document.getElementById('opt-eur-cap').checked = s.eurCap; if(s.mondePays !== undefined) document.getElementById('opt-monde-pays').checked = s.mondePays; if(s.mondeFlg !== undefined) document.getElementById('opt-monde-flg').checked = s.mondeFlg; if(s.mondeCap !== undefined) document.getElementById('opt-monde-cap').checked = s.mondeCap;
         if(s.pla !== undefined) document.getElementById('opt-pla').checked = s.pla; if(s.his !== undefined) document.getElementById('opt-his').checked = s.his; 
+        if(s.readSpeed) { const r = document.getElementById('rs-' + s.readSpeed); if(r) r.checked = true; }
     } 
     ['fr', 'monde', 'cult'].forEach(grp => checkMaster(grp));
 }
@@ -134,7 +136,7 @@ function showToast(m, c="#1e293b", icon="🔔") {
     setTimeout(()=>t.classList.remove('show'), 3000); 
 }
     
-function switchTab(tabId) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); if(tabId === 'home') { document.getElementById('v-home').classList.add('active'); document.getElementById('nav-home').classList.add('active'); refreshDailyInfo(); } else if (tabId === 'stats') { document.getElementById('v-stats').classList.add('active'); document.getElementById('nav-stats').classList.add('active'); calculerEtAfficherStats(); } }
+function switchTab(tabId) { clearPendingNext(); document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); if(tabId === 'home') { document.getElementById('v-home').classList.add('active'); document.getElementById('nav-home').classList.add('active'); refreshDailyInfo(); } else if (tabId === 'stats') { document.getElementById('v-stats').classList.add('active'); document.getElementById('nav-stats').classList.add('active'); calculerEtAfficherStats(); } }
 function effacerDB() { if(confirm("Effacer vos XP et votre progression ?")) { localStorage.clear(); location.reload(); } }
 
 function updateXPUI() {
@@ -214,7 +216,7 @@ async function loadDataAndMap() {
         
         let unlockedDeps = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
         let dbReg = geojsonReg.features.map(f => ({ id: "geo_reg_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "reg", nom: f.properties.nom }));
-        let dbDep = geojsonDep.features.map(f => ({ id: "geo_dep_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "dep", nom: f.properties.nom, reg: f.properties.nom, unlocked: unlockedDeps.includes(f.properties.code) }));
+        let dbDep = geojsonDep.features.map(f => ({ id: "geo_dep_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "dep", nom: f.properties.nom, reg: DEP_REGIONS[f.properties.code] || f.properties.nom, unlocked: unlockedDeps.includes(f.properties.code) }));
         
         db = [...DATA_VILLES, ...DATA_NATURE, ...DATA_PLANTES, ...DATA_HISTOIRE, ...dbReg, ...dbDep];
 
@@ -387,7 +389,7 @@ function drawHeatmap() {
         });
 }
 
-function quitGame() { clearInterval(timerInterval); switchTab('home'); }
+function quitGame() { clearInterval(timerInterval); clearPendingNext(); switchTab('home'); }
 
 async function launchGame(mode) {
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -398,7 +400,7 @@ async function launchGame(mode) {
     if(!isLoaded) { switchTab('home'); return; } 
 
     gameMode = mode; lives = 3; isEndless = false; isChronoMode = false; safeSetText('score-val', `${userXP}`);
-    document.getElementById('timer-ui').style.display = 'none'; clearInterval(timerInterval);
+    document.getElementById('timer-ui').style.display = 'none'; clearInterval(timerInterval); clearPendingNext();
 
     d3.selectAll(".departement").classed("dep-locked", false).classed("dep-unlocked", false);
 
@@ -497,6 +499,7 @@ function endGameChrono() {
 
 function askQuestion() {
     if (svgElement) { svgElement.interrupt(); }
+    clearPendingNext();
 
     if(lives > 0) safeSetText('lives-ui', "❤️".repeat(lives)); else if (lives === -1) safeSetText('lives-ui', "♾️"); else safeSetText('lives-ui', "💀");
     d3.select("#target-pointer").attr("display", "none");
@@ -525,9 +528,12 @@ function askQuestion() {
     if(!current) return;
 
     // --- LOGIQUE FOCUS ---
-    if(gameMode === 'custom' && document.getElementById('focus-zone').value !== 'all' && !current.hasZoomedFocus) {
+    // Le sélecteur "focus-zone" n'existe pas (ou plus) dans la page : sans ce garde-fou,
+    // le Quiz Libre plantait dès la première question.
+    const focusZone = document.getElementById('focus-zone');
+    if(gameMode === 'custom' && focusZone && focusZone.value !== 'all' && !current.hasZoomedFocus) {
         current.hasZoomedFocus = true; 
-        const regionTarget = db.find(i => i.type === 'reg' && i.nom === document.getElementById('focus-zone').value);
+        const regionTarget = db.find(i => i.type === 'reg' && i.nom === focusZone.value);
         if(regionTarget) {
             setTimeout(() => {
                 const node = d3.select("#" + regionTarget.id).node();
@@ -547,6 +553,7 @@ function askQuestion() {
 
     safeSetText('q-counter', isEndless ? "" : `Reste: ${session.length + 1}`);
     document.getElementById('q-hierarchy').style.display = 'none'; 
+    document.getElementById('q-mnemo').style.display = 'none'; 
     
     d3.selectAll(".region, .departement, .ville-point, .pays-monde").classed("succes", false).classed("erreur", false).classed("highlight", false).classed("highlight-vil", false).classed("focus-target", false).style("fill", "");
     d3.selectAll(".nature-element").classed("succes", false).classed("erreur", false).classed("highlight", false);
@@ -688,6 +695,9 @@ function revealAnswer() {
 function evaluateAnswer(isGood) {
     if(isChronoMode && timeLeft <= 0) return; 
 
+    document.getElementById('eval-ui').style.display = 'none';
+    document.getElementById('btn-reveal').style.display = 'none';
+
     d3.select("#g-villes").selectAll(".ville-point").style("opacity", 1);
     let itemDB = db.find(i => i.id === current.id);
     
@@ -761,7 +771,7 @@ function evaluateAnswer(isGood) {
             if(window.navigator.vibrate) window.navigator.vibrate(50); 
             if(!isChronoMode) showToast(`Bravo ! C'était <b>${current.nom}</b> !`, "#10b981", "✅"); 
         }
-        setTimeout(() => { askQuestion(); }, isChronoMode ? 350 : 1600); 
+        scheduleNextQuestion(isChronoMode ? 350 : 1600); 
     } else { 
         handleError(); 
     }
@@ -773,7 +783,7 @@ function handleError() {
     
     if (isChronoMode) {
         timeLeft = Math.max(0, timeLeft - 3); safeSetText('timer-val', timeLeft);
-        showToast("-3 Secondes !", "#f43f5e", "⏱️"); setTimeout(() => { askQuestion(); }, 800); return;
+        showToast("-3 Secondes !", "#f43f5e", "⏱️"); scheduleNextQuestion(800); return;
     }
 
     if(lives > 0) { lives--; if(lives === 0) { alert("Game Over !"); return switchTab('home'); } }
@@ -790,7 +800,7 @@ function handleError() {
     
     showToast("Raté ! Elle reviendra.", "#f43f5e", "❌"); 
     localStorage.setItem('LearnV28_Master', JSON.stringify(db)); 
-    setTimeout(() => { askQuestion(); }, 2000);
+    scheduleNextQuestion(2000);
 }
 
 function handleMapClick(elHTML, idClique) {
@@ -823,7 +833,162 @@ function afficherContexte(item) {
     else if (item.type === 'nature') { safeSetText('q-hierarchy', `💡 ${item.anecdote}`); hier.style.display = 'block'; } 
     else if (item.type === 'his') { safeSetText('q-hierarchy', `📜 Événement validé !`); hier.style.display = 'none'; } 
     else if (item.type === 'vil') { safeSetText('q-hierarchy', `📍 ${item.nom}  >  🌍 ${item.reg || '?'}`); hier.style.display = 'block'; } 
-    else if (item.type === 'dep') { safeSetText('q-hierarchy', `🧩 ${item.nom}  >  🌍 ${item.reg || '?'}`); hier.style.display = 'block'; } 
+    else if (item.type === 'dep') { safeSetText('q-hierarchy', `🧩 ${item.nom} (${item.code})  >  🌍 ${item.reg || '?'}`); hier.style.display = 'block'; } 
     else if (item.type === 'flag' || item.type === 'cap' || item.type === 'country') { safeSetText('q-hierarchy', `🌍 ${item.contexte}`); hier.style.display = 'block'; } 
     else { hier.style.display = 'none'; }
+    afficherMnemo(item);
 }
+// ============================================================
+//   LES MOYENS MNÉMOTECHNIQUES
+//   On ne montre une astuce QUE s'il en existe une vraie.
+//   Rien à inventer : pas d'astuce = rien ne s'affiche.
+// ============================================================
+
+function normKey(s) {
+    return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z]/g, "");
+}
+
+let MNEMO_REG_INDEX = null;
+function getMnemoRegion(nom) {
+    if (!MNEMO_REG_INDEX) {
+        MNEMO_REG_INDEX = {};
+        Object.keys(MNEMO_REGIONS).forEach(k => { MNEMO_REG_INDEX[normKey(k)] = MNEMO_REGIONS[k]; });
+    }
+    return MNEMO_REG_INDEX[normKey(nom)] || null;
+}
+
+// Le classement des n° de départements : 2A et 2B se glissent entre 19 et 21
+function depRank(code) {
+    if (code === "2A") return 19.1;
+    if (code === "2B") return 19.2;
+    return parseInt(code, 10);
+}
+
+// Pour un département, l'astuce se calcule : le n° vient de l'ordre alphabétique de 1790.
+// Les exceptions (Corse, Paris, petite couronne, Belfort...) ont leur texte dans MNEMO_DEPS.
+function getMnemoDep(item) {
+    if (MNEMO_DEPS[item.code]) return MNEMO_DEPS[item.code];
+
+    const deps = db.filter(i => i.type === 'dep' && i.code).sort((a, b) => depRank(a.code) - depRank(b.code));
+    const idx = deps.findIndex(d => d.code === item.code);
+    if (idx === -1) return null;
+
+    const prev = deps[idx - 1], next = deps[idx + 1];
+    let suite = "";
+    if (prev) suite += `${prev.code} ${prev.nom} → `;
+    suite += `${item.code} ${item.nom}`;
+    if (next) suite += ` → ${next.code} ${next.nom}`;
+
+    return `Les n° suivent l'ordre alphabétique des noms de 1790 (sans compter les Haut-, Bas- ou Deux-) : ${suite}.`;
+}
+
+function getMnemo(item) {
+    if (!item) return null;
+    const iso = (item.id || "").split("_").pop(); // cap_FRA, fl_FRA, w_FRA
+
+    switch (item.type) {
+        case 'dep':     return getMnemoDep(item);
+        case 'reg':     return getMnemoRegion(item.nom);
+        case 'vil':     return MNEMO_VILLES[item.id] || null;
+        case 'nature':  return MNEMO_NATURE[item.id] || null;
+        case 'his':     return MNEMO_HISTOIRE[item.id] || null;
+        case 'pla':     return MNEMO_PLANTES[item.id] || MNEMO_FAMILLES[item.famille] || null;
+        case 'cap':     return MNEMO_CAPITALES[iso] || null;
+        case 'flag':    return MNEMO_DRAPEAUX[iso] || null;
+        case 'country': return MNEMO_PAYS[iso] || null;
+    }
+    return null;
+}
+
+function afficherMnemo(item) {
+    const box = document.getElementById('q-mnemo');
+    if (!box) return;
+    const astuce = getMnemo(item);
+    if (astuce) {
+        box.innerHTML = `<b>🧠 Astuce :</b> ${astuce}`;
+        box.style.display = 'block';
+    } else {
+        box.innerHTML = "";
+        box.style.display = 'none';
+    }
+}
+
+// ============================================================
+//   LE TEMPS DE LECTURE
+//   Avant : on enchaînait après 1,6 s, impossible de lire quoi que ce soit.
+//   Maintenant : le délai s'adapte au texte affiché, une barre montre
+//   le temps restant, on peut mettre en pause en touchant le texte
+//   ou passer tout de suite avec "Suivant".
+// ============================================================
+
+let readTick = null, readTimer = null, readLeft = 0, readTotal = 0, readPaused = false;
+
+function getReadingSpeed() {
+    const el = document.querySelector('input[name="read-speed"]:checked');
+    return el ? el.value : 'normal';
+}
+
+function clearPendingNext() {
+    if (readTick) { clearInterval(readTick); readTick = null; }
+    if (readTimer) { clearTimeout(readTimer); readTimer = null; }
+    readPaused = false;
+    const zone = document.getElementById('read-zone');
+    if (zone) zone.style.display = 'none';
+    const fill = document.getElementById('read-fill');
+    if (fill) fill.classList.remove('paused');
+}
+
+function texteVisible(id) {
+    const el = document.getElementById(id);
+    return (el && el.style.display !== 'none') ? (el.innerText || "") : "";
+}
+
+// Plus il y a à lire, plus on laisse de temps (plafonné à 15 s)
+function computeReadingTime(base) {
+    const nbChars = (texteVisible('q-hierarchy') + texteVisible('q-mnemo')).length;
+    const parChar = getReadingSpeed() === 'fast' ? 22 : 55;
+    return Math.min(15000, base + nbChars * parChar);
+}
+
+function scheduleNextQuestion(base) {
+    clearPendingNext();
+
+    const zone = document.getElementById('read-zone');
+    // Mode chrono : on garde le rythme, chaque seconde compte
+    if (isChronoMode || !zone) { readTimer = setTimeout(askQuestion, base); return; }
+
+    const fill = document.getElementById('read-fill');
+    const track = document.getElementById('read-track');
+    const hint = document.getElementById('read-hint');
+    zone.style.display = 'flex';
+
+    if (getReadingSpeed() === 'manual') {
+        track.style.display = 'none';
+        hint.innerText = "Prends ton temps 🙂";
+        return;
+    }
+
+    track.style.display = 'block';
+    hint.innerText = "👆 Touche le texte pour mettre en pause";
+    readTotal = computeReadingTime(base);
+    readLeft = readTotal;
+    fill.style.width = "100%";
+
+    readTick = setInterval(() => {
+        if (readPaused) return;
+        readLeft -= 50;
+        fill.style.width = Math.max(0, (readLeft / readTotal) * 100) + "%";
+        if (readLeft <= 0) { clearPendingNext(); askQuestion(); }
+    }, 50);
+}
+
+function toggleReadingPause() {
+    if (!readTick) return;
+    readPaused = !readPaused;
+    const fill = document.getElementById('read-fill');
+    const hint = document.getElementById('read-hint');
+    if (fill) fill.classList.toggle('paused', readPaused);
+    if (hint) hint.innerText = readPaused ? "⏸️ En pause — Suivant quand tu veux" : "👆 Touche le texte pour mettre en pause";
+}
+
+function goToNextQuestion() { clearPendingNext(); askQuestion(); }

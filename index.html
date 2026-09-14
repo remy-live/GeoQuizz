@@ -191,15 +191,22 @@
         <div class="question-panel" id="question-panel">
             <h2 id="q-target">La cible</h2>
             <p class="subtitle" id="q-question">La question</p>
-            <div class="hierarchy" id="q-hierarchy" style="display:none;">Contexte</div>
-            
+            <div class="hierarchy" id="q-hierarchy" style="display:none;" onclick="toggleReadingPause()">Contexte</div>
+            <div class="mnemo" id="q-mnemo" style="display:none;" onclick="toggleReadingPause()"></div>
+
+            <div class="read-zone" id="read-zone" style="display:none;">
+                <div class="read-track" id="read-track"><div class="read-fill" id="read-fill"></div></div>
+                <div class="read-hint" id="read-hint">👆 Touche le texte pour mettre en pause</div>
+                <button class="btn-primary btn-continue" onclick="goToNextQuestion()">Suivant ➡️</button>
+            </div>
+
             <div class="flashcard-ui" id="flashcard-ui">
                 <button class="btn-primary" id="btn-reveal" onclick="revealAnswer()">Voir la réponse</button>
                 <div class="eval-buttons" id="eval-ui" style="display:none;">
                     <button class="btn-eval fail" onclick="evaluateAnswer(false)">Je ne savais pas</button>
                     <button class="btn-eval success" onclick="evaluateAnswer(true)">Je le savais</button>
                 </div>
-                <button class="btn-primary" id="btn-next" style="display:none; width: 100%; background: var(--world);" onclick="askQuestion()">Suivant ➡️</button>
+                <button class="btn-primary" id="btn-next" style="display:none; width: 100%; background: var(--world);" onclick="goToNextQuestion()">Suivant ➡️</button>
             </div>
         </div>
     </div>
@@ -244,6 +251,16 @@
             </div>
 
             <button class="btn-secondary" onclick="toggleAll()" style="font-size: 0.8rem; margin-bottom: 20px;">Tout cocher / décocher</button>
+
+            <div class="checkbox-group">
+                <label class="master-checkbox" style="cursor: default;">⏱️ Temps de lecture</label>
+                <p class="subtitle" style="margin-bottom: 12px;">Combien de temps la réponse et l'astuce restent affichées avant la question suivante.</p>
+                <div class="radio-group">
+                    <label class="radio-card"><input type="radio" name="read-speed" id="rs-fast" value="fast"><span>Rapide</span></label>
+                    <label class="radio-card"><input type="radio" name="read-speed" id="rs-normal" value="normal" checked><span>Normal</span></label>
+                    <label class="radio-card"><input type="radio" name="read-speed" id="rs-manual" value="manual"><span>Manuel 👆</span></label>
+                </div>
+            </div>
 
             <div style="display: flex; gap: 10px;">
                 <button class="btn-primary" onclick="saveAndCloseSettings()" style="flex: 2;">Valider</button>
