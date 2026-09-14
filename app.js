@@ -205,10 +205,21 @@ async function loadDataAndMap() {
             d3.json("https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson"),
             d3.json("https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions-version-simplifiee.geojson"),
             fetch("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"),
-            fetch("https://restcountries.com/v3.1/all?fields=name,cca3,region,flags,capital,translations")
+            fetch(URL_PAYS)
         ]), 6000);
         
-        const worldGeojson = await worldRes.json(); const apiData = await apiRes.json();
+        const worldGeojson = await worldRes.json();
+        let apiData = await apiRes.json();
+
+        // Filet de sécurité : si l'API n'aime pas un des champs demandés, on
+        // retente avec la liste minimale plutôt que de perdre tout le monde.
+        if (!Array.isArray(apiData)) {
+            const retry = await fetchWithTimeout(fetch(URL_PAYS_MINIMAL), 5000);
+            apiData = await retry.json();
+        }
+        if (!Array.isArray(apiData)) apiData = [];
+
+        construireInfosMonde(apiData);
         
         geoFRDep = geojsonDep;
         geoFRReg = geojsonReg;
@@ -221,11 +232,12 @@ async function loadDataAndMap() {
         db = [...DATA_VILLES, ...DATA_NATURE, ...DATA_PLANTES, ...DATA_HISTOIRE, ...dbReg, ...dbDep];
 
         apiData.forEach(c => {
-            let nomFR = c.translations?.fra?.common || c.name.common; let cap = c.capital?.[0] || "Inconnue"; let dom = c.region === "Europe" ? "europe" : "monde";
+            const info = WORLD_INFO[c.cca3]; if(!info) return;
+            let dom = c.region === "Europe" ? "europe" : "monde";
             let hasSvg = worldGeojson.features.some(f => f.id === c.cca3);
-            db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: nomFR, image: c.flags.svg, contexte: c.region });
-            if(cap !== "Inconnue") db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: cap, contexte: `Capitale : ${nomFR}`, anecdote: c.region });
-            if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: nomFR, contexte: c.region });
+            db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone });
+            if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone });
+            if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone });
         });
 
         d3.select("#g-regions").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region").attr("id", d => "geo_reg_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
@@ -577,6 +589,8 @@ function askQuestion() {
         safeSetText('q-question', current.type === 'cap' ? current.contexte : "À quel événement correspond cette date ?"); 
         safeSetText('txt-date', current.type === 'cap' ? "🏛️" : current.nom); 
         safeSetText('text-prompt', current.type === 'cap' ? current.contexte : "Que s'est-il passé ?"); 
+        // La frise chronologique n'a rien à faire sur une question de capitale
+        document.getElementById('timeline-ui').style.display = current.type === 'his' ? 'flex' : 'none';
         document.querySelectorAll('.t-period').forEach(el => el.classList.remove('active'));
         if(current.periode !== undefined) document.getElementById('tp-' + current.periode).classList.add('active');
         showFlashUI();
@@ -834,7 +848,8 @@ function afficherContexte(item) {
     else if (item.type === 'his') { safeSetText('q-hierarchy', `📜 Événement validé !`); hier.style.display = 'none'; } 
     else if (item.type === 'vil') { safeSetText('q-hierarchy', `📍 ${item.nom}  >  🌍 ${item.reg || '?'}`); hier.style.display = 'block'; } 
     else if (item.type === 'dep') { safeSetText('q-hierarchy', `🧩 ${item.nom} (${item.code})  >  🌍 ${item.reg || '?'}`); hier.style.display = 'block'; } 
-    else if (item.type === 'flag' || item.type === 'cap' || item.type === 'country') { safeSetText('q-hierarchy', `🌍 ${item.contexte}`); hier.style.display = 'block'; } 
+    else if (item.type === 'cap') { safeSetText('q-hierarchy', `🏛️ ${item.nom}  >  🌍 ${item.pays || '?'}${item.zone ? ' (' + item.zone + ')' : ''}`); hier.style.display = 'block'; } 
+    else if (item.type === 'flag' || item.type === 'country') { safeSetText('q-hierarchy', `🌍 ${item.contexte}`); hier.style.display = 'block'; } 
     else { hier.style.display = 'none'; }
     afficherMnemo(item);
 }
@@ -893,9 +908,9 @@ function getMnemo(item) {
         case 'nature':  return MNEMO_NATURE[item.id] || null;
         case 'his':     return MNEMO_HISTOIRE[item.id] || null;
         case 'pla':     return MNEMO_PLANTES[item.id] || MNEMO_FAMILLES[item.famille] || null;
-        case 'cap':     return MNEMO_CAPITALES[iso] || null;
+        case 'cap':     return MNEMO_CAPITALES[iso] || getMnemoCapitaleAuto(iso);
         case 'flag':    return MNEMO_DRAPEAUX[iso] || null;
-        case 'country': return MNEMO_PAYS[iso] || null;
+        case 'country': return MNEMO_PAYS[iso] || getMnemoPaysAuto(iso);
     }
     return null;
 }
@@ -911,6 +926,105 @@ function afficherMnemo(item) {
         box.innerHTML = "";
         box.style.display = 'none';
     }
+}
+
+// ============================================================
+//   LE MONDE : on garde sous la main les infos de chaque pays
+//   (voisins, enclavement, superficie, sous-région). C'est ce qui
+//   permet de CALCULER une astuce vraie pour n'importe quel pays,
+//   sans rien inventer.
+// ============================================================
+
+const CHAMPS_PAYS = "name,cca3,region,subregion,flags,capital,translations,borders,landlocked,area";
+const URL_PAYS = "https://restcountries.com/v3.1/all?fields=" + CHAMPS_PAYS;
+const URL_PAYS_MINIMAL = "https://restcountries.com/v3.1/all?fields=name,cca3,region,flags,capital,translations";
+
+let WORLD_INFO = {};
+
+function construireInfosMonde(apiData) {
+    WORLD_INFO = {};
+    apiData.forEach(c => {
+        if (!c || !c.cca3) return;
+        WORLD_INFO[c.cca3] = {
+            nom: c.translations?.fra?.common || c.name?.common || c.cca3,
+            capitale: CAPITALES_FR[c.cca3] || (c.capital && c.capital[0]) || "",
+            region: c.region || "",
+            zone: ZONES_FR[c.subregion] || ZONES_FR[c.region] || c.subregion || c.region || "",
+            voisinsConnus: Array.isArray(c.borders),
+            voisins: c.borders || [],
+            enclave: !!c.landlocked,
+            superficie: c.area || 0
+        };
+    });
+
+    // Le classement par superficie sert aux astuces "l'un des plus grands pays"
+    Object.keys(WORLD_INFO)
+        .filter(iso => WORLD_INFO[iso].region !== "Antarctic" && WORLD_INFO[iso].superficie > 0)
+        .sort((a, b) => WORLD_INFO[b].superficie - WORLD_INFO[a].superficie)
+        .slice(0, 10)
+        .forEach(iso => { WORLD_INFO[iso].geant = true; });
+}
+
+function listeFR(noms) {
+    if (noms.length === 1) return noms[0];
+    return noms.slice(0, -1).join(", ") + " et " + noms[noms.length - 1];
+}
+
+// On ne nomme que les voisins qu'on sait nommer en français : afficher
+// un code brut comme "DEU" ne servirait à personne.
+function nomsVoisins(info) {
+    return info.voisins.map(code => WORLD_INFO[code] && WORLD_INFO[code].nom).filter(Boolean);
+}
+
+function superficieFR(km2) {
+    if (km2 < 1) return "moins de 1 km²";
+    return Math.round(km2).toLocaleString('fr-FR') + " km²";
+}
+
+// Astuce calculée pour un pays : ses voisins le situent sur la carte
+// bien mieux qu'une phrase inventée. Tout vient des vraies frontières.
+function getMnemoPaysAuto(iso) {
+    const info = WORLD_INFO[iso];
+    if (!info) return null;
+
+    const v = nomsVoisins(info);
+    const bouts = [];
+
+    if (!info.voisinsConnus) { /* frontières inconnues : on ne dit rien à leur sujet */ }
+    else if (info.enclave && v.length === 1) bouts.push(`Le repère parfait : un pays enclavé dans un seul autre, ${v[0]}, qui l'entoure complètement.`);
+    else if (info.voisins.length === 0) bouts.push("Aucune frontière terrestre : c'est une île (ou un archipel), entourée d'eau de tous les côtés.");
+    else if (v.length === 1 && info.voisins.length === 1) bouts.push(`Un seul voisin : ${v[0]}. Repère ce pays sur la carte, le tien est juste à côté.`);
+    else if (v.length === 0) { /* on ne sait nommer aucun voisin : on ne raconte rien */ }
+    else if (info.enclave) bouts.push(`Pas un mètre de côte. Ses voisins : ${listeFR(v.slice(0, 4))}.`);
+    else if (v.length <= 4) bouts.push(`Ses voisins : ${listeFR(v)}.`);
+    else bouts.push(`Il touche ${v.length} pays, dont : ${listeFR(v.slice(0, 3))}.`);
+
+    if (info.geant) bouts.push("C'est aussi l'un des 10 plus grands pays du monde.");
+    else if (info.superficie > 0 && info.superficie < 500) bouts.push(`Et c'est un tout petit pays : ${superficieFR(info.superficie)}.`);
+
+    return bouts.length ? bouts.join(" ") : null;
+}
+
+// Astuce calculée pour une capitale : le cas le plus fréquent et le plus
+// logique, c'est quand le pays et sa capitale portent le même nom.
+function getMnemoCapitaleAuto(iso) {
+    const info = WORLD_INFO[iso];
+    if (!info || !info.capitale) return null;
+
+    const pays = normKey(info.nom), cap = normKey(info.capitale);
+    const commun = prefixeCommun(pays, cap);
+    if (commun >= 4) {
+        return cap === pays
+            ? `Le plus simple qui soit : la capitale porte exactement le nom du pays.`
+            : `Même racine : ${info.nom} → ${info.capitale}. Le pays et sa capitale portent le même nom.`;
+    }
+    return null;
+}
+
+function prefixeCommun(a, b) {
+    let i = 0;
+    while (i < a.length && i < b.length && a[i] === b[i]) i++;
+    return i;
 }
 
 // ============================================================

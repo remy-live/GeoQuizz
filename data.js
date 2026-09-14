@@ -237,13 +237,9 @@ const MNEMO_CAPITALES = {
     "BRA": "Brasilia, ni Rio ni São Paulo : une capitale construite en 1960 en plein centre du pays pour attirer les habitants vers l'intérieur.",
     "TUR": "Ankara, pas Istanbul : Atatürk a déplacé la capitale au centre de l'Anatolie en 1923, loin de l'ancienne Constantinople.",
     "NZL": "Wellington, pas Auckland : elle est au centre du pays, pile entre l'île du Nord et l'île du Sud.",
-    "ZAF": "L'Afrique du Sud a trois capitales : Pretoria (le gouvernement), Le Cap (le parlement), Bloemfontein (la justice).",
     "NGA": "Abuja, pas Lagos : capitale déplacée au centre du pays en 1991, pour être à égale distance du nord et du sud.",
-    "NLD": "Amsterdam est la capitale officielle, mais c'est à La Haye que siègent le gouvernement, le roi et la Cour internationale.",
     "MAR": "Rabat, pas Casablanca : Casa est la capitale économique, Rabat la capitale politique.",
     "PAK": "Islamabad, pas Karachi : une ville neuve des années 1960, construite au nord près de Rawalpindi.",
-    "IND": "New Delhi (le quartier administratif de Delhi), pas Bombay : le nom contient New, comme une ville dessinée exprès par les Britanniques.",
-    "BEL": "Bruxelles : capitale de la Belgique ET siège des institutions européennes et de l'OTAN.",
     "CIV": "Yamoussoukro est la capitale officielle depuis 1983 (la ville natale du président Houphouët-Boigny), mais Abidjan reste la grande ville.",
     "TZA": "Dodoma, pas Dar es Salaam : la capitale a été déplacée au centre du pays, loin de la côte.",
     "BOL": "La Bolivie a deux capitales : Sucre est la capitale constitutionnelle, La Paz le siège du gouvernement (et la plus haute du monde).",
@@ -302,3 +298,236 @@ const MNEMO_PAYS = {
     "IDN": "L'Indonésie est un chapelet de plus de 17 000 îles étalé sur l'équateur, entre l'Asie et l'Australie.",
     "CAN": "Le deuxième plus grand pays du monde, mais presque tous ses habitants vivent dans la bande collée à la frontière des États-Unis."
 };
+
+// ============================================================
+//   LES ZONES DU MONDE EN FRANÇAIS
+//   (l'API renvoie les sous-régions en anglais)
+// ============================================================
+
+const ZONES_FR = {
+    "Northern Europe": "Europe du Nord", "Western Europe": "Europe de l'Ouest", "Southern Europe": "Europe du Sud",
+    "Eastern Europe": "Europe de l'Est", "Central Europe": "Europe centrale", "Southeast Europe": "Europe du Sud-Est",
+    "Northern Africa": "Afrique du Nord", "Western Africa": "Afrique de l'Ouest", "Middle Africa": "Afrique centrale",
+    "Eastern Africa": "Afrique de l'Est", "Southern Africa": "Afrique australe",
+    "Northern America": "Amérique du Nord", "Central America": "Amérique centrale", "South America": "Amérique du Sud", "Caribbean": "Caraïbes",
+    "Western Asia": "Moyen-Orient", "Central Asia": "Asie centrale", "Southern Asia": "Asie du Sud",
+    "Eastern Asia": "Asie de l'Est", "South-Eastern Asia": "Asie du Sud-Est",
+    "Australia and New Zealand": "Australie et Nouvelle-Zélande", "Melanesia": "Mélanésie", "Micronesia": "Micronésie", "Polynesia": "Polynésie",
+    "Europe": "Europe", "Asia": "Asie", "Africa": "Afrique", "Americas": "Amériques", "Oceania": "Océanie", "Antarctic": "Antarctique"
+};
+
+// ============================================================
+//   LES CAPITALES EN FRANÇAIS
+//   L'API ne donne que le nom anglais (Brussels, Moscow, Copenhagen...).
+//   On corrige uniquement celles qui s'écrivent autrement en français :
+//   les autres (Paris, Berlin, Madrid, Ottawa...) sont déjà bonnes.
+// ============================================================
+
+const CAPITALES_FR = {
+    // Europe
+    "AND": "Andorre-la-Vieille", "AUT": "Vienne", "BEL": "Bruxelles", "CYP": "Nicosie", "DNK": "Copenhague",
+    "GRC": "Athènes", "MLT": "La Valette", "POL": "Varsovie", "PRT": "Lisbonne", "ROU": "Bucarest",
+    "RUS": "Moscou", "SMR": "Saint-Marin", "CHE": "Berne", "UKR": "Kiev", "GBR": "Londres", "VAT": "Cité du Vatican",
+    // Asie
+    "AFG": "Kaboul", "ARM": "Erevan", "AZE": "Bakou", "BGD": "Dacca", "BTN": "Thimphou", "CHN": "Pékin",
+    "GEO": "Tbilissi", "IRN": "Téhéran", "IRQ": "Bagdad", "ISR": "Jérusalem", "KWT": "Koweït", "KGZ": "Bichkek",
+    "LBN": "Beyrouth", "MNG": "Oulan-Bator", "NPL": "Katmandou", "OMN": "Mascate", "PHL": "Manille",
+    "SAU": "Riyad", "SGP": "Singapour", "KOR": "Séoul", "SYR": "Damas", "TJK": "Douchanbé",
+    "TKM": "Achgabat", "ARE": "Abou Dabi", "UZB": "Tachkent", "VNM": "Hanoï",
+    // Afrique
+    "DZA": "Alger", "EGY": "Le Caire", "ETH": "Addis-Abeba", "SWZ": "Mbabané", "SOM": "Mogadiscio",
+    "SSD": "Djouba", "STP": "Sao Tomé",
+    // Amériques
+    "BRA": "Brasilia", "COL": "Bogota", "CUB": "La Havane", "DOM": "Saint-Domingue", "GTM": "Guatemala",
+    "MEX": "Mexico", "PAN": "Panama", "PRY": "Asuncion", "USA": "Washington"
+};
+
+// ============================================================
+//   LES CAPITALES D'EUROPE
+//   Étymologie, position, histoire : à chaque fois un vrai "pourquoi".
+//   Quatre d'entre elles sont sur le Danube, trois se suivent du nord
+//   au sud dans les pays baltes : ces groupes se retiennent ensemble.
+// ============================================================
+
+Object.assign(MNEMO_CAPITALES, {
+    // --- Le Danube traverse quatre capitales : aucun autre fleuve au monde n'en fait autant ---
+    "AUT": "Vienne est la première des quatre capitales du Danube : Vienne, Bratislava, Budapest, Belgrade, d'amont en aval. Aucun autre fleuve n'en traverse autant.",
+    "SVK": "Bratislava est la deuxième capitale du Danube (après Vienne, avant Budapest) : les deux villes sont à 60 km l'une de l'autre, les plus proches d'Europe.",
+    "HUN": "Budapest = Buda + Pest, deux villes qui se faisaient face de part et d'autre du Danube et qui ont fusionné en 1873. Buda sur la colline, Pest à plat.",
+    "SRB": "Belgrade veut dire la ville blanche, et c'est la dernière des quatre capitales du Danube, là où la Save le rejoint.",
+
+    // --- Les pays baltes, du nord au sud : Estonie, Lettonie, Lituanie ---
+    "EST": "Du nord au sud : Tallinn (Estonie), Riga (Lettonie), Vilnius (Lituanie). Tallinn est la plus au nord, juste en face d'Helsinki, et son nom veut dire la ville danoise.",
+    "LVA": "Riga est la capitale du milieu des trois baltes (Tallinn au nord, Vilnius au sud) et la plus grande ville de la région.",
+    "LTU": "Vilnius est la plus au sud des trois baltes et doit son nom à la rivière Vilnia, comme Tallinn au nord et Riga au centre.",
+
+    // --- Les capitales dont le nom raconte quelque chose ---
+    "FRA": "Paris vient des Parisii, le peuple gaulois installé dans l'île de la Cité.",
+    "GBR": "Londres vient de Londinium, la ville fondée par les Romains sur la Tamise.",
+    "IRL": "Dublin vient du gaélique dubh linn, l'étang noir, la mare sombre où la ville est née.",
+    "DNK": "Copenhague vient de Købmandshavn, le port des marchands : le Danemark vit du commerce maritime depuis toujours.",
+    "ISL": "Reykjavik veut dire la baie des fumées : les premiers Vikings ont pris la vapeur des sources chaudes pour de la fumée.",
+    "POL": "Varsovie vient de la légende du pêcheur Wars et de la sirène Sawa : la sirène est d'ailleurs l'emblème de la ville.",
+    "RUS": "Moscou porte le nom de sa rivière, la Moskova. Le Kremlin veut simplement dire la forteresse.",
+    "BGR": "Sofia porte le nom de son église Sainte-Sophie : c'est la sagesse (sophia) en grec.",
+    "GRC": "Athènes, la ville d'Athéna : la déesse a gagné la ville en offrant l'olivier, et son temple, le Parthénon, domine encore la colline.",
+    "MLT": "La Valette porte le nom de Jean de Valette, le grand maître des Chevaliers qui a résisté au siège de 1565.",
+    "MNE": "Podgorica veut dire sous la petite colline : la ville est au pied du mont Gorica.",
+    "NLD": "Amsterdam = une digue (dam) sur la rivière Amstel (Rotterdam, c'est la même recette sur la Rotte). Mais le gouvernement, lui, siège à La Haye.",
+    "BEL": "Bruxelles vient de broek-sel, la maison dans le marais. C'est aussi la capitale de l'Union européenne et le siège de l'OTAN.",
+    "LUX": "Le pays, la capitale et la province belge voisine portent le même nom, tiré de Lucilinburhuc : le petit château.",
+
+    // --- Les autres capitales d'Europe ---
+    "DEU": "Berlin est à l'est du pays, tout près de la Pologne : c'est ce qui a permis de la couper en deux pendant la guerre froide.",
+    "ITA": "Rome est au centre de la botte, sur le Tibre, avec un pays entier dedans : le Vatican.",
+    "PRT": "Lisbonne est tout à l'ouest, à l'embouchure du Tage : la capitale la plus à l'ouest du continent européen.",
+    "NOR": "Oslo est tout au fond d'un fjord, au sud du pays : la Norvège est si longue que sa capitale est à son extrémité.",
+    "SWE": "Stockholm est bâtie sur 14 îles, d'où son nom d'îlot de rondins : on l'appelle la Venise du Nord.",
+    "FIN": "Helsinki est sur la côte sud, juste en face de Tallinn : 80 km de mer séparent les deux capitales.",
+    "CZE": "Prague est traversée par la Vltava et son pont Charles : c'est la ville aux cent clochers, au cœur exact de l'Europe.",
+    "ROU": "Bucarest, sur le Danube ? Non : elle est à 60 km au nord du fleuve. C'est le piège classique des quatre capitales danubiennes.",
+    "UKR": "Kiev est sur le Dniepr, le fleuve qui coupe l'Ukraine en deux : rive droite la vieille ville, rive gauche les quartiers modernes.",
+    "BLR": "Minsk est au centre exact de la Biélorussie, dont le nom veut dire Russie blanche.",
+    "MDA": "Chisinau est coincée entre la Roumanie et l'Ukraine : on y parle roumain, le pays a longtemps fait partie de la Moldavie historique.",
+    "HRV": "Zagreb est au nord du pays, loin de la mer : la Croatie a la forme d'un boomerang, et sa capitale est au coude.",
+    "SVN": "Ljubljana a un dragon pour emblème (celui du pont des Dragons) et son nom évoque ljubljena, la bien-aimée.",
+    "BIH": "Sarajevo, la ville des Jeux olympiques de 1984 et de l'attentat de 1914 qui a déclenché la Première Guerre mondiale.",
+    "MKD": "Skopje est la ville natale de Mère Teresa, sur le Vardar, au nord d'un pays sans accès à la mer.",
+    "ALB": "Tirana est dominée par une pyramide de béton héritée de la dictature : l'Albanie est juste en face du talon de l'Italie.",
+    "XKX": "Pristina est la capitale du plus jeune pays d'Europe : le Kosovo s'est séparé de la Serbie en 2008.",
+    "CYP": "Nicosie est la dernière capitale coupée en deux par une frontière : moitié chypriote grecque, moitié chypriote turque.",
+    "AND": "Andorre-la-Vieille est la capitale la plus haute d'Europe (1023 m), perchée entre la France et l'Espagne.",
+    "LIE": "Vaduz : un village de 5000 habitants avec un château au-dessus, capitale d'un pays coincé entre la Suisse et l'Autriche.",
+    "MCO": "Monaco : le pays et la capitale ne font qu'un, sur 2 km² de rocher au bord de la Méditerranée.",
+    "SMR": "Saint-Marin : le pays et sa capitale portent le même nom, perchés sur le mont Titano, tout entiers dans l'Italie.",
+    "VAT": "La Cité du Vatican EST le pays : le plus petit État du monde, à l'intérieur de Rome."
+});
+
+// ============================================================
+//   LES CAPITALES DU RESTE DU MONDE
+// ============================================================
+
+Object.assign(MNEMO_CAPITALES, {
+    // Amériques
+    "MEX": "Même racine : Mexique → Mexico. La ville est bâtie sur un lac asséché, à 2240 m d'altitude.",
+    "CUB": "La Havane : son port en cul-de-sac, facile à défendre, en a fait la clé de l'empire espagnol d'Amérique.",
+    "DOM": "République dominicaine → Saint-Domingue : le pays et sa capitale ont la même racine, Domingo. C'est la plus vieille ville européenne des Amériques (1496).",
+    "SLV": "Le pays s'appelle El Salvador, la capitale ajoute juste San : San Salvador.",
+    "ARG": "Buenos Aires veut dire les bons airs : les marins espagnols remerciaient la Vierge des bons vents qui les y menait.",
+    "URY": "Montevideo, sur le Rio de la Plata, juste en face de Buenos Aires : les deux capitales se font face de part et d'autre de l'estuaire.",
+    "CHL": "Santiago est coincée entre les Andes et le Pacifique, au milieu d'un pays long de 4300 km.",
+    "PER": "Lima est sur la côte, pas dans les Andes : les Espagnols l'ont fondée face à la mer pour rapatrier l'or, laissant Cuzco, la capitale inca, dans la montagne.",
+    "COL": "Bogota est perchée à 2600 m sur un plateau des Andes : l'une des plus hautes capitales du monde.",
+    "ECU": "Quito est posée sur l'équateur (à 25 km), à 2850 m : le pays s'appelle d'ailleurs l'Équateur.",
+    "VEN": "Caracas est dans une vallée juste derrière la montagne qui la sépare des Caraïbes : la mer est à 15 km, mais invisible.",
+    "CRI": "San José, au centre du pays, sur un plateau tempéré : le Costa Rica veut dire la côte riche.",
+    "HTI": "Port-au-Prince et Saint-Domingue se partagent la même île, Hispaniola : le français à l'ouest, l'espagnol à l'est.",
+
+    // Afrique
+    "EGY": "Le Caire, la plus grande ville d'Afrique, est posée là où le Nil s'ouvre en delta : les pyramides de Gizeh sont dans sa banlieue.",
+    "DZA": "Même racine : Algérie → Alger. La ville a donné son nom au pays, et non l'inverse (comme Tunis et la Tunisie).",
+    "TUN": "Même racine : Tunisie → Tunis. Carthage, la rivale de Rome, est aujourd'hui une banlieue de la capitale.",
+    "SEN": "Dakar est la pointe la plus à l'ouest de tout le continent africain, face à l'île de Gorée.",
+    "ETH": "Addis-Abeba veut dire la nouvelle fleur : c'est aussi le siège de l'Union africaine, et la ville n'a que 130 ans.",
+    "KEN": "Nairobi est née d'une gare sur la voie ferrée Mombasa-Ouganda : son nom vient du maasaï enkare nyrobi, l'eau froide.",
+    "GHA": "Accra est sur le golfe de Guinée, tout près du point zéro : le méridien de Greenwich passe juste à l'est de la ville.",
+    "COD": "Kinshasa et Brazzaville sont les deux seules capitales du monde qui se font face : le fleuve Congo les sépare de 3 km.",
+    "COG": "Brazzaville porte le nom de l'explorateur Savorgnan de Brazza, et regarde Kinshasa de l'autre côté du fleuve Congo.",
+    "CMR": "Yaoundé est au centre du pays, dans les collines ; Douala, plus grande, garde la côte.",
+    "MDG": "Antananarivo veut dire la ville des mille : elle est au centre des hautes terres de Madagascar, à 1300 m.",
+    "ZAF": "L'Afrique du Sud a trois capitales : Pretoria (le gouvernement), Le Cap (le parlement), Bloemfontein (la justice).",
+
+    // Asie et Moyen-Orient
+    "IND": "New Delhi (le quartier administratif de Delhi), pas Bombay : le nom contient New, comme une ville dessinée exprès par les Britanniques.",
+    "KOR": "Séoul est à 50 km seulement de la frontière nord-coréenne : une capitale posée juste sous la zone démilitarisée.",
+    "PRK": "Pyongyang veut dire le terrain plat : c'est la plus vieille ville de la péninsule coréenne.",
+    "THA": "Bangkok porte un nom de cérémonie si long qu'il est entré au livre des records ; les Thaïs l'appellent Krung Thep, la cité des anges.",
+    "MMR": "Naypyidaw, pas Rangoun : capitale sortie de terre en 2005, avec des avenues à 20 voies presque vides.",
+    "MYS": "Kuala Lumpur veut dire le confluent boueux : la ville est née là où deux rivières se rejoignent.",
+    "PHL": "Manille est sur l'île de Luçon, la plus grande des 7000 îles des Philippines.",
+    "IDN": "Jakarta s'enfonce dans le sol et dans la mer : c'est pour cela que l'Indonésie construit une nouvelle capitale sur l'île de Bornéo.",
+    "NPL": "Katmandou est une vallée entière à 1400 m, au pied de l'Himalaya : l'Everest est à 160 km.",
+    "BGD": "Dacca est au cœur du plus grand delta du monde (Gange + Brahmapoutre) : d'où les inondations chaque mousson.",
+    "IRN": "Téhéran est adossée aux monts Elbourz enneigés, à 1200 m : le nord de la ville est 700 m plus haut que le sud.",
+    "IRQ": "Bagdad est sur le Tigre, au cœur de l'ancienne Mésopotamie, le pays entre les deux fleuves (Tigre et Euphrate).",
+    "SYR": "Damas se présente comme la plus vieille capitale habitée sans interruption du monde.",
+    "LBN": "Beyrouth est le grand port du Levant, coincé entre la montagne libanaise et la Méditerranée.",
+    "ISR": "Jérusalem est la ville sainte des trois religions du Livre : juive, chrétienne et musulmane.",
+    "SAU": "Riyad est au centre du désert, pas sur la côte : les deux villes saintes (La Mecque, Médine) sont à l'ouest.",
+    "ARE": "Abou Dabi, pas Dubaï : Dubaï est la plus connue, mais c'est Abou Dabi qui a le pétrole et le pouvoir.",
+    "KWT": "Le pays et sa capitale portent le même nom : Koweït, au fond du golfe Persique.",
+    "QAT": "Doha est posée sur une petite péninsule qui pointe dans le golfe Persique, à côté de l'Arabie saoudite.",
+    "MNG": "Oulan-Bator veut dire le héros rouge : c'est la capitale la plus froide du monde, à -25 °C de moyenne en janvier.",
+    "KAZ": "Astana veut dire tout simplement la capitale en kazakh : elle a remplacé Almaty en 1997, au centre du pays.",
+    "UZB": "Tachkent est la grande ville de la route de la Soie, avec Samarcande et Boukhara juste à côté.",
+    "AFG": "Kaboul est dans une vallée à 1800 m, au pied des cols qui mènent au Pakistan : la fameuse passe de Khyber.",
+    "SGP": "Singapour : la ville, l'île et le pays ne font qu'un, à la pointe sud de la Malaisie.",
+
+    // Océanie
+    "PNG": "Port Moresby est sur la moitié est de la Nouvelle-Guinée : l'autre moitié appartient à l'Indonésie.",
+    "FJI": "Suva est sur Viti Levu, la grande île des Fidji, près de la ligne de changement de date."
+});
+
+// ============================================================
+//   LES FAMILLES DE DRAPEAUX
+//   Beaucoup de drapeaux se ressemblent parce qu'ils partagent
+//   une histoire : couleurs panafricaines, panarabes, Union Jack,
+//   Grande Colombie... Une famille apprise, dix drapeaux retenus.
+// ============================================================
+
+Object.assign(MNEMO_DRAPEAUX, {
+    // Couleurs panafricaines (vert-jaune-rouge, reprises de l'Éthiopie, jamais colonisée)
+    "ETH": "Vert-jaune-rouge : l'Éthiopie, seul pays africain jamais colonisé, a donné ses couleurs à la moitié du continent.",
+    "SEN": "Vert-jaune-rouge panafricain, avec une étoile verte au centre : c'est le Sénégal.",
+    "MLI": "Vert-jaune-rouge panafricain SANS aucun symbole : trois bandes nues, c'est le Mali.",
+    "GIN": "La Guinée, c'est le Mali à l'envers : rouge-jaune-vert au lieu de vert-jaune-rouge.",
+    "GHA": "Rouge-jaune-vert avec une étoile noire au milieu : le Ghana, dont l'équipe s'appelle les Black Stars.",
+    "CMR": "Vert-rouge-jaune en bandes verticales, une étoile jaune au centre : le Cameroun.",
+
+    // Couleurs panarabes (rouge, blanc, noir, vert)
+    "YEM": "Rouge-blanc-noir sans aucun symbole : c'est le Yémen. Les mêmes bandes avec un aigle, c'est l'Égypte.",
+    "EGY": "Rouge-blanc-noir panarabe avec l'aigle de Saladin doré au centre : l'Égypte.",
+    "SYR": "Rouge-blanc-noir panarabe avec deux étoiles vertes sur la bande blanche : la Syrie.",
+    "IRQ": "Rouge-blanc-noir panarabe avec une inscription verte sur la bande blanche : l'Irak.",
+    "JOR": "Les couleurs panarabes en triangle rouge côté mât, avec une petite étoile blanche à sept branches : la Jordanie.",
+
+    // L'héritage de la Grande Colombie
+    "COL": "Jaune-bleu-rouge, l'héritage de la Grande Colombie : sans rien = Colombie, avec des étoiles = Venezuela, avec un blason = Équateur.",
+    "VEN": "Jaune-bleu-rouge de la Grande Colombie, plus un arc d'étoiles blanches : le Venezuela.",
+    "ECU": "Jaune-bleu-rouge de la Grande Colombie, plus un blason au condor : l'Équateur. La bande jaune est deux fois plus large.",
+
+    // Les cousins qui trompent tout le monde
+    "MEX": "Vert-blanc-rouge comme l'Italie, mais avec un aigle sur un cactus au milieu : c'est le Mexique.",
+    "ITA": "Vert-blanc-rouge tout nu : l'Italie. Si un aigle dévore un serpent au centre, c'est le Mexique.",
+    "LBR": "Des bandes rouges et blanches avec une étoile dans un carré bleu : le Liberia, fondé par des Américains affranchis, a copié son modèle. Mais une seule étoile.",
+    "MYS": "Des bandes rouges et blanches façon États-Unis, mais un croissant et une étoile jaunes dans le coin bleu : la Malaisie.",
+    "CHN": "Étoiles jaunes sur fond rouge : une grande et quatre petites = la Chine ; une seule grande = le Viêt Nam.",
+    "VNM": "Une seule grande étoile jaune sur fond rouge : le Viêt Nam. La Chine en a cinq.",
+    "IND": "Safran-blanc-vert avec une roue bleue au centre (le chakra) : l'Inde. Le Niger a les mêmes bandes avec un disque orange.",
+    "NER": "Orange-blanc-vert avec un rond orange au centre : le Niger, à ne pas confondre avec l'Inde et sa roue bleue.",
+    "ARG": "Bleu ciel et blanc avec le soleil de Mai au centre : l'Argentine. L'Uruguay a le même soleil, mais dans le coin.",
+    "URY": "Neuf bandes bleues et blanches avec le soleil dans le coin : l'Uruguay. En Argentine, le soleil est au milieu.",
+    "GRC": "Neuf bandes bleues et blanches : autant que les syllabes de la devise grecque, avec la croix au coin pour l'orthodoxie.",
+    "CHL": "Une étoile blanche dans un carré bleu, une bande blanche et une rouge : le Chili.",
+    "TUN": "Croissant et étoile ROUGES dans un disque blanc, sur fond rouge : la Tunisie, l'inverse de la Turquie.",
+    "PAK": "Vert avec un croissant et une étoile blancs, plus une bande blanche côté mât pour les minorités : le Pakistan.",
+    "ZAF": "Le seul drapeau à six couleurs : un Y couché qui symbolise les routes d'un peuple qui se rejoignent.",
+    "KOR": "Le cercle rouge et bleu du yin-yang au centre, entouré de quatre trigrammes noirs : la Corée du Sud."
+});
+
+// ============================================================
+//   QUELQUES PAYS QUI ONT UNE FORME OU UNE POSITION PARLANTE
+//   (pour tous les autres, l'astuce est calculée à partir des
+//    vraies frontières : voir getMnemoPaysAuto)
+// ============================================================
+
+Object.assign(MNEMO_PAYS, {
+    "GMB": "La Gambie est un doigt planté dans le Sénégal, le long de son fleuve : le plus petit pays d'Afrique continentale.",
+    "VNM": "Le Viêt Nam est un S allongé le long de la mer de Chine : large au nord et au sud, très étroit au milieu.",
+    "JPN": "Un arc de quatre grandes îles au large de la Corée : Hokkaido au nord, puis Honshu, Shikoku et Kyushu au sud.",
+    "NZL": "Deux grandes îles au sud-est de l'Australie, à 2000 km de tout : île du Nord et île du Sud, tout simplement.",
+    "IND": "Un triangle qui pointe vers le sud, avec l'Himalaya comme toit et le Sri Lanka comme goutte sous la pointe.",
+    "ESP": "L'Espagne occupe presque toute la péninsule Ibérique, ce carré posé sous les Pyrénées ; le Portugal en prend la bande ouest.",
+    "GRC": "La Grèce, c'est une main aux doigts déchirés dans la mer, plus 6000 îles : elle ferme les Balkans au sud.",
+    "AUS": "Le seul pays qui occupe un continent entier, avec un désert rouge au centre et toutes les villes sur les bords."
+});
