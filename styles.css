@@ -296,3 +296,10 @@ svg#svg-carte { width: 100%; height: 100%; touch-action: none; }
 .trophy-nom { display: block; font-size: 9px; font-weight: 700; color: var(--muted); margin-top: 3px; line-height: 1.2; }
 .trophy.gagne .trophy-nom { color: var(--text); }
 [data-theme="dark"] .trophy { background: rgba(0,0,0,0.2); }
+
+/* LES ONGLETS DES PARCOURS (France / Europe / Monde / Capitales) */
+.tour-tabs { display: flex; gap: 5px; margin: 10px 0 4px; overflow-x: auto; scrollbar-width: none; }
+.tour-tabs::-webkit-scrollbar { display: none; }
+.tour-tab { flex: 0 0 auto; background: var(--bg); border: 1px solid var(--border-light); color: var(--muted); font-size: 10px; font-weight: 700; padding: 6px 8px; border-radius: 20px; white-space: nowrap; cursor: pointer; font-family: inherit; transition: 0.2s; }
+.tour-tab.actif { background: var(--warning); border-color: var(--warning); color: white; box-shadow: 0 3px 8px rgba(245, 158, 11, 0.3); }
+[data-theme="dark"] .tour-tab { background: rgba(0,0,0,0.2); }

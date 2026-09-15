@@ -559,7 +559,10 @@ const TROPHEES = [
     { id: "histoire",  emo: "📜", nom: "Historien",          desc: "Maîtriser les 23 dates" },
     { id: "etape1",    emo: "🚴", nom: "Première étape",     desc: "Gagner une étape du Tour de France" },
     { id: "tour",      emo: "🏆", nom: "Tour de France",     desc: "Terminer les 13 étapes du Tour" },
-    { id: "maillot",   emo: "💛", nom: "Maillot jaune",      desc: "Décrocher les 39 étoiles du Tour" }
+    { id: "maillot",   emo: "💛", nom: "Maillot jaune",      desc: "Décrocher les 39 étoiles du Tour de France" },
+    { id: "europe",    emo: "🇪🇺", nom: "Tour d'Europe",       desc: "Terminer les étapes du Tour d'Europe" },
+    { id: "monde",     emo: "🌍", nom: "Tour du Monde",        desc: "Terminer les étapes du Tour du Monde" },
+    { id: "capitour",  emo: "🏛️", nom: "Tour des Capitales",   desc: "Terminer les étapes du Tour des Capitales" }
 ];
 
 // ============================================================
@@ -568,18 +571,53 @@ const TROPHEES = [
 //   avec l'arrivée à Paris comme le vrai Tour.
 // ============================================================
 
-const TOUR_ETAPES = [
-    { reg: "Hauts-de-France",            court: "Nord",        emo: "⛏️", titre: "Le grand départ : terrils, beffrois et mer du Nord." },
-    { reg: "Normandie",                  court: "Normandie",   emo: "🐄", titre: "Cap à l'ouest par les plages du Débarquement." },
-    { reg: "Bretagne",                   court: "Bretagne",    emo: "🌊", titre: "La pointe de l'Europe, face à l'Atlantique." },
-    { reg: "Pays de la Loire",           court: "Loire",       emo: "⛵", titre: "On redescend la Loire jusqu'à l'océan." },
-    { reg: "Centre-Val de Loire",        court: "Centre",      emo: "🏰", titre: "Étape de plat entre les châteaux." },
-    { reg: "Nouvelle-Aquitaine",         court: "Aquitaine",   emo: "🍷", titre: "La plus grande région, des vignes aux Pyrénées." },
-    { reg: "Occitanie",                  court: "Occitanie",   emo: "☀️", titre: "Du pays cathare à la Méditerranée." },
-    { reg: "Provence-Alpes-Côte d'Azur", court: "PACA",        emo: "🏖️", titre: "Le seul coin qui a les Alpes ET la mer." },
-    { reg: "Corse",                      court: "Corse",       emo: "⛴️", titre: "Transfert en bateau vers l'Île de Beauté." },
-    { reg: "Auvergne-Rhône-Alpes",       court: "Alpes",       emo: "⛰️", titre: "L'étape reine : volcans puis haute montagne." },
-    { reg: "Bourgogne-Franche-Comté",    court: "Bourgogne",   emo: "🧀", titre: "Entre vignes et Jura, on remonte vers l'est." },
-    { reg: "Grand Est",                  court: "Grand Est",   emo: "🥨", titre: "Vosges, Alsace et Champagne avant la dernière ligne droite." },
-    { reg: "Île-de-France",              court: "Paris",       emo: "🏁", titre: "Arrivée sur les Champs-Élysées." }
+const ETAPES_FRANCE = [
+    { cle: "Hauts-de-France",            court: "Nord",        emo: "⛏️", titre: "Le grand départ : terrils, beffrois et mer du Nord." },
+    { cle: "Normandie",                  court: "Normandie",   emo: "🐄", titre: "Cap à l'ouest par les plages du Débarquement." },
+    { cle: "Bretagne",                   court: "Bretagne",    emo: "🌊", titre: "La pointe de l'Europe, face à l'Atlantique." },
+    { cle: "Pays de la Loire",           court: "Loire",       emo: "⛵", titre: "On redescend la Loire jusqu'à l'océan." },
+    { cle: "Centre-Val de Loire",        court: "Centre",      emo: "🏰", titre: "Étape de plat entre les châteaux." },
+    { cle: "Nouvelle-Aquitaine",         court: "Aquitaine",   emo: "🍷", titre: "La plus grande région, des vignes aux Pyrénées." },
+    { cle: "Occitanie",                  court: "Occitanie",   emo: "☀️", titre: "Du pays cathare à la Méditerranée." },
+    { cle: "Provence-Alpes-Côte d'Azur", court: "PACA",        emo: "🏖️", titre: "Le seul coin qui a les Alpes ET la mer." },
+    { cle: "Corse",                      court: "Corse",       emo: "⛴️", titre: "Transfert en bateau vers l'Île de Beauté." },
+    { cle: "Auvergne-Rhône-Alpes",       court: "Alpes",       emo: "⛰️", titre: "L'étape reine : volcans puis haute montagne." },
+    { cle: "Bourgogne-Franche-Comté",    court: "Bourgogne",   emo: "🧀", titre: "Entre vignes et Jura, on remonte vers l'est." },
+    { cle: "Grand Est",                  court: "Grand Est",   emo: "🥨", titre: "Vosges, Alsace et Champagne avant la dernière ligne droite." },
+    { cle: "Île-de-France",              court: "Paris",       emo: "🏁", titre: "Arrivée sur les Champs-Élysées." }
 ];
+
+// Les étapes hors de France se repèrent à la sous-région renvoyée par
+// l'API (en anglais) : c'est la valeur la plus sûre pour filtrer.
+const ETAPES_EUROPE = [
+    { cle: "eur-ouest",   court: "Ouest",     emo: "🥐", titre: "Départ chez nos voisins immédiats.",            sr: ["Western Europe"] },
+    { cle: "eur-nord",    court: "Nord",      emo: "❄️", titre: "Scandinavie, Baltique et îles du Nord.",        sr: ["Northern Europe"] },
+    { cle: "eur-sud",     court: "Sud",       emo: "🏛️", titre: "La Méditerranée et ses péninsules.",            sr: ["Southern Europe"] },
+    { cle: "eur-centre",  court: "Centre",    emo: "🏰", titre: "Le cœur du continent, entre Rhin et Carpates.", sr: ["Central Europe"] },
+    { cle: "eur-balkans", court: "Balkans",   emo: "⛰️", titre: "L'ex-Yougoslavie et ses voisines.",             sr: ["Southeast Europe"] },
+    { cle: "eur-est",     court: "Est",       emo: "🪆", titre: "Dernière étape : les grandes plaines de l'Est.", sr: ["Eastern Europe"] }
+];
+
+const ETAPES_MONDE = [
+    { cle: "m-europe",   court: "Europe",     emo: "🇪🇺", titre: "On commence par le continent qu'on connaît le mieux.", sr: ["Western Europe","Northern Europe","Southern Europe","Central Europe","Southeast Europe","Eastern Europe"] },
+    { cle: "m-amnord",   court: "Am. Nord",   emo: "🍁", titre: "Du Canada au Mexique.",                    sr: ["North America","Northern America"] },
+    { cle: "m-caraibes", court: "Caraïbes",   emo: "🌴", titre: "Les îles et l'isthme, entre les deux Amériques.", sr: ["Caribbean","Central America"] },
+    { cle: "m-amsud",    court: "Am. Sud",    emo: "💃", titre: "Des Andes à l'Amazonie.",                   sr: ["South America"] },
+    { cle: "m-afnord",   court: "Afr. Nord",  emo: "🐪", titre: "Le Maghreb et le Sahara.",                  sr: ["Northern Africa"] },
+    { cle: "m-afouest",  court: "Afr. Ouest", emo: "🥁", titre: "Du Sénégal au Nigeria.",                    sr: ["Western Africa"] },
+    { cle: "m-afcentre", court: "Afr. Est",   emo: "🦁", titre: "Le bassin du Congo et la corne de l'Afrique.", sr: ["Middle Africa","Eastern Africa"] },
+    { cle: "m-afsud",    court: "Afr. Sud",   emo: "🦓", titre: "La pointe australe du continent.",          sr: ["Southern Africa"] },
+    { cle: "m-moyen",    court: "Moyen-Or.",  emo: "🕌", titre: "Du Bosphore au golfe Persique.",            sr: ["Western Asia"] },
+    { cle: "m-asud",     court: "Asie Sud",   emo: "🐘", titre: "Le sous-continent indien et les steppes.",   sr: ["Southern Asia","Central Asia"] },
+    { cle: "m-aest",     court: "Asie Est",   emo: "🏯", titre: "De la Chine à l'Indonésie.",                sr: ["Eastern Asia","South-Eastern Asia"] },
+    { cle: "m-oceanie",  court: "Océanie",    emo: "🏝️", titre: "Arrivée au bout du monde.",                 sr: ["Australia and New Zealand","Melanesia","Micronesia","Polynesia"] }
+];
+
+// Les quatre parcours. Même moteur, même carte d'accueil : seul le
+// contenu des étapes change.
+const TOURS = {
+    france:    { nom: "Le Tour de France",     emo: "🚴", onglet: "🚴 France",    types: ["reg","dep","vil"], etapes: ETAPES_FRANCE },
+    europe:    { nom: "Le Tour d'Europe",      emo: "🇪🇺", onglet: "🇪🇺 Europe",   types: ["country","flag"],  etapes: ETAPES_EUROPE },
+    monde:     { nom: "Le Tour du Monde",      emo: "🌍", onglet: "🌍 Monde",     types: ["country","flag"],  etapes: ETAPES_MONDE },
+    capitales: { nom: "Le Tour des Capitales", emo: "🏛️", onglet: "🏛️ Capitales", types: ["cap"],             etapes: ETAPES_MONDE }
+};

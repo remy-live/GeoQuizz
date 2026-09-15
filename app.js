@@ -105,7 +105,7 @@ let userXP = parseInt(localStorage.getItem('LearnV28_XP') || 0);
 let timerInterval = null; let timeLeft = 60; let isChronoMode = false;
 let sessionErreurs = 0, sessionBonnes = 0, sessionTotal = 0, chronoBonnes = 0;   // pour les étoiles, les trophées et le défi
 let session0Ids = [];   // les questions de la partie, telles quelles, pour pouvoir la repartager
-let etapeEnCours = 0, defiRecu = null;
+let etapeEnCours = 0, tourEnCours = 'france', defiRecu = null;
 
 let geoFRDep = null, geoFRReg = null, geoWorld = null;
 let currentHeatmapMode = 'dep';
@@ -188,81 +188,128 @@ function shootConfetti() {
     }
 }
 
-async function loadDataAndMap() {
-    if(db.length > 0) return true; 
-    
-    if (typeof d3 === 'undefined') { showToast("Outils en cours de téléchargement (réseau lent).", "#f59e0b", "⏳"); return false; }
-    
+// --- Les sources de données, avec un miroir chacune ---
+// Si GitHub est lent ou bloqué, on retente sur le CDN jsDelivr, qui sert
+// exactement les mêmes fichiers.
+const URLS_DEP = [
+    "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson",
+    "https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/departements-version-simplifiee.geojson"
+];
+const URLS_REG = [
+    "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions-version-simplifiee.geojson",
+    "https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/regions-version-simplifiee.geojson"
+];
+const URLS_MONDE = [
+    "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson",
+    "https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/DATA/world.geojson"
+];
+
+let carteChargee = false, zoomPret = false;
+
+// Essaie chaque miroir à son tour. Ne lève jamais : renvoie null si tout échoue.
+async function chargerJSON(urls, ms) {
+    for (const url of urls) {
+        try { const data = await fetchWithTimeout(d3.json(url), ms); if (data) return data; }
+        catch (e) { /* miroir suivant */ }
+    }
+    return null;
+}
+
+// Les pays : d'abord la version complète (frontières, superficie...),
+// sinon la version minimale. Renvoie [] si l'API ne répond pas.
+async function chargerPays(ms) {
+    for (const url of [URL_PAYS, URL_PAYS_MINIMAL]) {
+        try {
+            const res = await fetchWithTimeout(fetch(url), ms);
+            const data = await res.json();
+            if (Array.isArray(data) && data.length) return data;
+        } catch (e) { /* on tente la suivante */ }
+    }
+    return [];
+}
+
+function preparerSVG() {
+    if (zoomPret) return;
     svgElement = d3.select("#svg-carte"); mapGroup = d3.select("#map-group");
-    zoomHandler = d3.zoom().scaleExtent([1, 30]).on("zoom", (e) => mapGroup.attr("transform", e.transform)); svgElement.call(zoomHandler);   
-    
-    svgElement.on("dblclick.zoom", null); 
-    svgElement.on("dblclick", () => {
-        svgElement.transition().duration(500).call(zoomHandler.transform, d3.zoomIdentity);
-    });
-    
+    zoomHandler = d3.zoom().scaleExtent([1, 30]).on("zoom", (e) => mapGroup.attr("transform", e.transform));
+    svgElement.call(zoomHandler);
+    svgElement.on("dblclick.zoom", null);
+    svgElement.on("dblclick", () => { svgElement.transition().duration(500).call(zoomHandler.transform, d3.zoomIdentity); });
+    zoomPret = true;
+}
+
+async function loadDataAndMap() {
+    if (carteChargee) return true;   // on ne recharge que si la dernière tentative a échoué
+
+    if (typeof d3 === 'undefined') { showToast("Outils en cours de téléchargement (réseau lent).", "#f59e0b", "⏳"); return false; }
+
+    preparerSVG();
+    safeSetText('q-target', "Chargement de la carte…");
+    safeSetText('q-question', "Quelques secondes, le temps de récupérer les cartes.");
+
     const projFR = d3.geoConicConformal().center([2.45, 46.2]).scale(2800).translate([250, 260]); const pathFR = d3.geoPath().projection(projFR);
     const projWorld = d3.geoMercator().scale(80).translate([250, 320]); const pathWorld = d3.geoPath().projection(projWorld);
 
-    try {
-        const [geojsonDep, geojsonReg, worldRes, apiRes] = await fetchWithTimeout(Promise.all([
-            d3.json("https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson"),
-            d3.json("https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions-version-simplifiee.geojson"),
-            fetch("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"),
-            fetch(URL_PAYS)
-        ]), 6000);
-        
-        const worldGeojson = await worldRes.json();
-        let apiData = await apiRes.json();
+    // Chaque source est chargée pour elle-même : le monde qui traîne ne doit
+    // plus faire tomber la carte de France avec lui.
+    const [geojsonDep, geojsonReg, worldGeojson, apiData] = await Promise.all([
+        chargerJSON(URLS_DEP, 15000),
+        chargerJSON(URLS_REG, 15000),
+        chargerJSON(URLS_MONDE, 15000),
+        chargerPays(15000)
+    ]);
 
-        // Filet de sécurité : si l'API n'aime pas un des champs demandés, on
-        // retente avec la liste minimale plutôt que de perdre tout le monde.
-        if (!Array.isArray(apiData)) {
-            const retry = await fetchWithTimeout(fetch(URL_PAYS_MINIMAL), 5000);
-            apiData = await retry.json();
-        }
-        if (!Array.isArray(apiData)) apiData = [];
+    // On repart toujours d'une carte vierge : on peut arriver ici après un échec
+    d3.selectAll("#g-regions, #g-departements, #g-regions-outlines, #g-world, #g-nature, #g-villes").selectAll("*").remove();
+    db = [...DATA_VILLES, ...DATA_NATURE, ...DATA_PLANTES, ...DATA_HISTOIRE];
 
-        construireInfosMonde(apiData);
-        
-        geoFRDep = geojsonDep;
-        geoFRReg = geojsonReg;
+    if (!geojsonDep || !geojsonReg) {
+        // Sans le fond de carte, il n'y a pas de jeu : on le dit, et on
+        // laisse la porte ouverte à une nouvelle tentative.
+        showToast("Carte indisponible : vérifie ta connexion, puis retente.", "#f43f5e", "📡");
+        safeSetText('q-target', "Carte indisponible");
+        safeSetText('q-question', "Vérifie ta connexion et relance : l'appli réessaiera.");
+        return false;
+    }
+
+    geoFRDep = geojsonDep; geoFRReg = geojsonReg;
+
+    let unlockedDeps = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
+    let dbReg = geojsonReg.features.map(f => ({ id: "geo_reg_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "reg", nom: f.properties.nom }));
+    let dbDep = geojsonDep.features.map(f => ({ id: "geo_dep_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "dep", nom: f.properties.nom, reg: DEP_REGIONS[f.properties.code] || f.properties.nom, unlocked: unlockedDeps.includes(f.properties.code) }));
+    db = [...db, ...dbReg, ...dbDep];
+
+    d3.select("#g-regions").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region").attr("id", d => "geo_reg_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
+    d3.select("#g-departements").selectAll("path").data(geojsonDep.features).enter().append("path").attr("d", pathFR).attr("class", "departement").attr("id", d => "geo_dep_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
+    d3.select("#g-regions-outlines").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region-outline");
+
+    // Le monde est un bonus : s'il manque, la France se joue quand même
+    if (worldGeojson && apiData.length) {
         geoWorld = worldGeojson;
-        
-        let unlockedDeps = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
-        let dbReg = geojsonReg.features.map(f => ({ id: "geo_reg_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "reg", nom: f.properties.nom }));
-        let dbDep = geojsonDep.features.map(f => ({ id: "geo_dep_" + f.properties.code, code: f.properties.code, domaine: "geographie", type: "dep", nom: f.properties.nom, reg: DEP_REGIONS[f.properties.code] || f.properties.nom, unlocked: unlockedDeps.includes(f.properties.code) }));
-        
-        db = [...DATA_VILLES, ...DATA_NATURE, ...DATA_PLANTES, ...DATA_HISTOIRE, ...dbReg, ...dbDep];
-
+        construireInfosMonde(apiData);
         apiData.forEach(c => {
             const info = WORLD_INFO[c.cca3]; if(!info) return;
             let dom = c.region === "Europe" ? "europe" : "monde";
             let hasSvg = worldGeojson.features.some(f => f.id === c.cca3);
-            db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone });
-            if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone });
-            if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone });
+            db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
+            if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
+            if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
         });
-
-        d3.select("#g-regions").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region").attr("id", d => "geo_reg_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
-        d3.select("#g-departements").selectAll("path").data(geojsonDep.features).enter().append("path").attr("d", pathFR).attr("class", "departement").attr("id", d => "geo_dep_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
-        d3.select("#g-regions-outlines").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region-outline");
         d3.select("#g-world").selectAll("path").data(worldGeojson.features).enter().append("path").attr("d", pathWorld).attr("class", "pays-monde").attr("id", d => "w_" + d.id).on("click", function(e, d) { handleMapClick(this, "w_" + d.id); });
-
-    } catch(e) { 
-        db = [...DATA_VILLES, ...DATA_NATURE, ...DATA_PLANTES, ...DATA_HISTOIRE];
+    } else {
+        showToast("Les données du monde n'ont pas répondu : la France reste jouable.", "#f59e0b", "🌍");
     }
 
     const lineFleuve = d3.line().x(d => projFR(d)[0]).y(d => projFR(d)[1]).curve(d3.curveCatmullRom);
     const lineMassif = d3.line().x(d => projFR(d)[0]).y(d => projFR(d)[1]).curve(d3.curveCatmullRomClosed);
-    
+
     let n = d3.select("#g-nature").selectAll("g").data(DATA_NATURE).enter().append("g").attr("id", d => d.id).attr("class", "nature-element").on("click", function(e, d) { handleMapClick(this, d.id); });
     n.filter(d => d.typeNat === "massif").append("path").attr("d", d => lineMassif(d.coordsPath)).attr("class", "massif-path");
     n.filter(d => d.typeNat === "fleuve").append("path").attr("d", d => lineFleuve(d.coordsPath)).style("fill", "none").style("stroke", "transparent").style("stroke-width", "25px");
     n.filter(d => d.typeNat === "fleuve").append("path").attr("d", d => lineFleuve(d.coordsPath)).attr("class", "fleuve-path");
-        
-   let v = d3.select("#g-villes").selectAll("g").data(DATA_VILLES).enter().append("g");
-    
+
+    let v = d3.select("#g-villes").selectAll("g").data(DATA_VILLES).enter().append("g");
+
     // 1. LE POINT VISIBLE (En dessous)
     v.append("circle")
         .attr("cx", d => projFR(d.coords)[0])
@@ -281,10 +328,11 @@ async function loadDataAndMap() {
         .attr("id", d => "hit_" + d.id)
         .style("fill", "transparent") // Totalement invisible
         .style("cursor", "pointer")
-        .on("click", function(e, d) { 
-            e.stopPropagation(); 
-            handleMapClick(document.getElementById(d.id), d.id); 
+        .on("click", function(e, d) {
+            e.stopPropagation();
+            handleMapClick(document.getElementById(d.id), d.id);
         });
+
     let saved = localStorage.getItem('LearnV28_Master') || localStorage.getItem('LearnV27_Master');
     if (saved) {
         let savedDB = JSON.parse(saved);
@@ -293,6 +341,7 @@ async function loadDataAndMap() {
         db = db.map(item => ({...item, failCount: item.failCount || 0}));
     }
 
+    carteChargee = true;
     refreshDailyInfo(); updateXPUI(); calculerEtAfficherStats();
     return true;
 }
@@ -442,10 +491,10 @@ async function launchGame(mode) {
         isWaiting = false; return;
     }
     else if(mode === 'tour') {
-        const e = TOUR_ETAPES[etapeEnCours];
+        const e = etapesDu(tourEnCours)[etapeEnCours];
         safeSetText('game-title', `ÉTAPE ${etapeEnCours + 1} · ${e.court.toUpperCase()} ${e.emo}`);
-        pool = poolEtape(e.reg).sort(() => Math.random() - 0.5).slice(0, 8);
-        if(pool.length === 0) { showToast("Cette étape n'a pas encore de terrain de jeu.", "#f59e0b", "🚧"); switchTab('home'); return; }
+        pool = poolEtape(tourEnCours, e).sort(() => Math.random() - 0.5).slice(0, 8);
+        if(pool.length === 0) { showToast("Cette étape n'a pas de questions : il manque les données du monde.", "#f59e0b", "📡"); switchTab('home'); return; }
     }
     else if(mode === 'defi') {
         safeSetText('game-title', "LE DÉFI 🎯");
@@ -986,6 +1035,7 @@ function construireInfosMonde(apiData) {
             nom: c.translations?.fra?.common || c.name?.common || c.cca3,
             capitale: CAPITALES_FR[c.cca3] || (c.capital && c.capital[0]) || "",
             region: c.region || "",
+            sousRegion: c.subregion || c.region || "",
             zone: ZONES_FR[c.subregion] || ZONES_FR[c.region] || c.subregion || c.region || "",
             voisinsConnus: Array.isArray(c.borders),
             voisins: c.borders || [],
@@ -1239,8 +1289,8 @@ function trophesObtenus() {
     const maitrises = t => db.filter(i => i.type === t && i.rep > 0).length;
     const niveau = Math.floor(Math.sqrt(userXP / 50)) + 1;
     const serie = calculerSerie();
-    const etoiles = Object.values(lireTour()).reduce((a, b) => a + b, 0);
-    const etapes = Object.keys(lireTour()).length;
+    const etapesFaites = Object.values(lireTours()).reduce((n, t) => n + Object.keys(t).length, 0);
+    const boucle = id => Object.keys(lireTour(id)).length === TOURS[id].etapes.length;
 
     const tests = {
         debut: userXP >= 50, niv5: niveau >= 5, niv10: niveau >= 10,
@@ -1250,7 +1300,8 @@ function trophesObtenus() {
         vil20: maitrises('vil') >= 20, pays50: maitrises('country') >= 50,
         cap30: maitrises('cap') >= 30, flg30: maitrises('flag') >= 30,
         plantes: maitrises('pla') >= 20, histoire: maitrises('his') >= 23,
-        etape1: etapes >= 1, tour: etapes >= TOUR_ETAPES.length, maillot: etoiles >= TOUR_ETAPES.length * 3
+        etape1: etapesFaites >= 1, tour: boucle('france'), maillot: etoilesTotales('france') >= TOURS.france.etapes.length * 3,
+        europe: boucle('europe'), monde: boucle('monde'), capitour: boucle('capitales')
     };
     TROPHEES.forEach(t => { if (tests[t.id]) obtenus.push(t.id); });
     return obtenus;
@@ -1299,34 +1350,81 @@ function detailTrophee(id) {
 //   et les étoiles dépendent du nombre de fautes.
 // ============================================================
 
-function lireTour() { return JSON.parse(localStorage.getItem('LearnV28_Tour') || '{}'); }
+let tourActif = localStorage.getItem('LearnV28_TourActif') || 'france';
+if (!TOURS[tourActif]) tourActif = 'france';
 
-function etapeCourante() {
-    const tour = lireTour();
-    const i = TOUR_ETAPES.findIndex(e => !tour[e.reg]);
-    return i === -1 ? TOUR_ETAPES.length - 1 : i;   // tout fini : on reste sur la dernière
+// Ancien format : {"Bretagne": 2, ...} = les étoiles du Tour de France.
+// On l'enveloppe une fois pour toutes dans le nouveau format par parcours.
+function lireTours() {
+    const brut = JSON.parse(localStorage.getItem('LearnV28_Tour') || '{}');
+    const cles = Object.keys(brut);
+    if (cles.length && !cles.some(k => TOURS[k])) return { france: brut };
+    return brut;
+}
+function lireTour(id) { return lireTours()[id || tourActif] || {}; }
+
+function ecrireEtoiles(id, cle, etoiles) {
+    const tous = lireTours();
+    tous[id] = tous[id] || {};
+    tous[id][cle] = Math.max(tous[id][cle] || 0, etoiles);
+    localStorage.setItem('LearnV28_Tour', JSON.stringify(tous));
 }
 
-function etoilesTotales() { return Object.values(lireTour()).reduce((a, b) => a + b, 0); }
+function changerTour(id) {
+    if (!TOURS[id]) return;
+    tourActif = id;
+    localStorage.setItem('LearnV28_TourActif', id);
+    rafraichirTour();
+}
 
+function etapesDu(id) { return TOURS[id].etapes; }
+
+function etapeCourante(id) {
+    id = id || tourActif;
+    const fait = lireTour(id), etapes = etapesDu(id);
+    const i = etapes.findIndex(e => !fait[e.cle] && !etapeVide(id, e));
+    return i === -1 ? etapes.length - 1 : i;
+}
+
+// Une étape sans aucune question (sous-région absente des données, ou
+// monde non chargé) ne doit jamais bloquer la suite du parcours.
+function etapeVide(id, etape) { return db.length > 0 && poolEtape(id, etape).length === 0; }
+
+function etapeOuverte(id, i) {
+    if (i === 0) return true;
+    const precedente = etapesDu(id)[i - 1];
+    return !!lireTour(id)[precedente.cle] || etapeVide(id, precedente);
+}
+
+function etoilesTotales(id) { return Object.values(lireTour(id)).reduce((a, b) => a + b, 0); }
 function etoilesTexte(n) { return "⭐".repeat(n) + "☆".repeat(3 - n); }
 
 function rafraichirTour() {
-    const tour = lireTour(), courante = etapeCourante();
-    const fini = Object.keys(tour).length === TOUR_ETAPES.length;
-    const e = TOUR_ETAPES[courante];
+    const tour = TOURS[tourActif], etapes = tour.etapes, fait = lireTour();
+    const courante = etapeCourante(), e = etapes[courante];
+    const fini = Object.keys(fait).length === etapes.length;
 
-    safeSetText('tour-count', `⭐ ${etoilesTotales()}/${TOUR_ETAPES.length * 3}`);
-    safeSetText('tour-info', fini ? "Tour terminé ! Rejoue une étape pour décrocher les étoiles qui manquent."
-                                  : `Étape ${courante + 1}/${TOUR_ETAPES.length} · ${e.reg}`);
-    safeSetText('tour-titre', fini ? "🏁 Bravo, tu as bouclé la boucle." : `${e.emo} ${e.titre}`);
-    safeSetText('tour-btn', fini ? "Rejouer une étape" : `Prendre le départ`);
+    const onglets = document.getElementById('tour-tabs');
+    if (onglets) {
+        onglets.innerHTML = Object.keys(TOURS).map(id =>
+            `<button class="tour-tab ${id === tourActif ? 'actif' : ''}" onclick="changerTour('${id}')">${TOURS[id].onglet}</button>`).join('');
+        // Sur petit écran la ligne déborde : on ramène l'onglet choisi devant
+        const actif = onglets.querySelector('.actif');
+        if (actif) onglets.scrollLeft = Math.max(0, actif.offsetLeft - 8);
+    }
+
+    safeSetText('tour-nom', tour.nom + " " + tour.emo);
+    safeSetText('tour-count', `⭐ ${etoilesTotales()}/${etapes.length * 3}`);
+    safeSetText('tour-info', fini ? "Parcours bouclé ! Rejoue une étape pour décrocher les étoiles qui manquent."
+                                  : `Étape ${courante + 1}/${etapes.length} · ${e.court}`);
+    safeSetText('tour-titre', fini ? "🏁 Bravo, tu as fait le tour." : `${e.emo} ${e.titre}`);
+    safeSetText('tour-btn', fini ? "Rejouer une étape" : "Prendre le départ");
 
     const bande = document.getElementById('tour-strip');
     if (bande) {
-        bande.innerHTML = TOUR_ETAPES.map((et, i) => {
-            const etoiles = tour[et.reg] || 0;
-            const ouverte = i === 0 || tour[TOUR_ETAPES[i - 1].reg];
+        bande.innerHTML = etapes.map((et, i) => {
+            const etoiles = fait[et.cle] || 0;
+            const ouverte = etapeOuverte(tourActif, i);
             const classe = etoiles ? "faite" : (i === courante ? "courante" : (ouverte ? "" : "fermee"));
             return `<div class="etape ${classe}" onclick="lancerEtape(${i})">
                         <span class="etape-num">${ouverte || etoiles ? et.emo : "🔒"}</span>
@@ -1339,46 +1437,51 @@ function rafraichirTour() {
     }
 }
 
-// Le contenu d'une étape : uniquement la région, ses départements et ses villes
-function poolEtape(reg) {
-    const deps = db.filter(i => i.type === 'dep' && DEP_REGIONS[i.code] === reg);
-    const villes = db.filter(i => i.type === 'vil' && i.reg === reg);
-    const region = db.filter(i => i.type === 'reg' && i.nom === reg);
-    return [...region, ...deps, ...villes];
+// Le contenu d'une étape : en France on suit les régions, ailleurs on
+// suit la sous-région renvoyée par l'API.
+function poolEtape(id, etape) {
+    const tour = TOURS[id];
+    if (id === 'france') {
+        return db.filter(i =>
+            (i.type === 'reg' && i.nom === etape.cle) ||
+            (i.type === 'dep' && DEP_REGIONS[i.code] === etape.cle) ||
+            (i.type === 'vil' && i.reg === etape.cle));
+    }
+    return db.filter(i => tour.types.includes(i.type) && etape.sr && etape.sr.includes(i.sr));
 }
 
 async function lancerEtape(index) {
-    const tour = lireTour();
-    if (index > 0 && !tour[TOUR_ETAPES[index - 1].reg]) {
-        return showToast(`Termine d'abord l'étape ${index} : <b>${TOUR_ETAPES[index - 1].court}</b>`, "#f59e0b", "🔒");
+    const etapes = etapesDu(tourActif);
+    if (!etapeOuverte(tourActif, index)) {
+        return showToast(`Termine d'abord l'étape ${index} : <b>${etapes[index - 1].court}</b>`, "#f59e0b", "🔒");
     }
-    etapeEnCours = index;
+    etapeEnCours = index; tourEnCours = tourActif;
     await launchGame('tour');
 }
 
 function lancerEtapeCourante() { lancerEtape(etapeCourante()); }
 
-// Fin d'étape : les étoiles, le déblocage des départements dans l'Atlas
+// Fin d'étape : les étoiles, et en France le déblocage des départements
 function terminerEtape() {
-    const e = TOUR_ETAPES[etapeEnCours];
+    const e = etapesDu(tourEnCours)[etapeEnCours];
     const etoiles = sessionErreurs === 0 ? 3 : (sessionErreurs === 1 ? 2 : 1);
-    const tour = lireTour();
-    const avant = tour[e.reg] || 0;
-    tour[e.reg] = Math.max(avant, etoiles);
-    localStorage.setItem('LearnV28_Tour', JSON.stringify(tour));
+    ecrireEtoiles(tourEnCours, e.cle, etoiles);
 
-    // La région conquise s'ouvre dans l'Atlas
-    let unlocked = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
-    Object.keys(DEP_REGIONS).filter(code => DEP_REGIONS[code] === e.reg).forEach(code => {
-        if (!unlocked.includes(code)) unlocked.push(code);
-        const d = db.find(i => i.type === 'dep' && i.code === code); if (d) d.unlocked = true;
-    });
-    localStorage.setItem('LearnV28_UnlockedDeps', JSON.stringify(unlocked));
+    let bonus = "";
+    if (tourEnCours === 'france') {
+        let unlocked = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
+        Object.keys(DEP_REGIONS).filter(code => DEP_REGIONS[code] === e.cle).forEach(code => {
+            if (!unlocked.includes(code)) unlocked.push(code);
+            const d = db.find(i => i.type === 'dep' && i.code === code); if (d) d.unlocked = true;
+        });
+        localStorage.setItem('LearnV28_UnlockedDeps', JSON.stringify(unlocked));
+        bonus = "<br>Ses départements rejoignent ton Atlas.";
+    }
 
     safeSetText('q-target', `${e.emo} Étape gagnée !`);
-    safeSetText('q-question', `${e.reg} · ${etoilesTexte(etoiles)}`);
+    safeSetText('q-question', `${e.court} · ${etoilesTexte(etoiles)}`);
     sonFanfare(); shootConfetti();
-    showToast(`<b>${e.reg}</b> conquise ! ${etoilesTexte(etoiles)}<br>Ses départements rejoignent ton Atlas.`, "#10b981", e.emo);
+    showToast(`<b>${e.court}</b> ${etoilesTexte(etoiles)}${bonus}`, "#10b981", e.emo);
     addXP(30);
 }
 

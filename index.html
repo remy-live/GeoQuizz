@@ -50,9 +50,10 @@
 
         <div class="card" id="tour-card">
             <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <h2>Le Tour de France 🚴</h2>
+                <h2 id="tour-nom">Le Tour de France 🚴</h2>
                 <span id="tour-count" style="font-weight: 800; font-size: 13px; color: var(--warning);">⭐ 0/39</span>
             </div>
+            <div class="tour-tabs" id="tour-tabs"></div>
             <p class="subtitle" id="tour-info">Étape 1/13</p>
             <p class="subtitle" id="tour-titre" style="margin-top: 4px; font-style: italic;"></p>
             <div class="tour-strip" id="tour-strip"></div>
@@ -112,7 +113,7 @@
 
         <div class="stat-card">
             <div class="stat-header" style="display: flex; justify-content: space-between;">
-                <span>🏆 Mes trophées</span><span id="trophy-count" style="color: var(--xp);">0/21</span>
+                <span>🏆 Mes trophées</span><span id="trophy-count" style="color: var(--xp);">—</span>
             </div>
             <p class="subtitle" id="trophy-streak" style="margin-bottom: 15px;"></p>
             <div class="trophy-grid" id="trophy-grid"></div>
