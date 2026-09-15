@@ -531,3 +531,55 @@ Object.assign(MNEMO_PAYS, {
     "GRC": "La Grèce, c'est une main aux doigts déchirés dans la mer, plus 6000 îles : elle ferme les Balkans au sud.",
     "AUS": "Le seul pays qui occupe un continent entier, avec un désert rouge au centre et toutes les villes sur les bords."
 });
+
+// ============================================================
+//   LES TROPHÉES
+//   Tous se calculent à partir de ce qui est déjà enregistré :
+//   pas de nouvelle mécanique à entretenir.
+// ============================================================
+
+const TROPHEES = [
+    { id: "debut",     emo: "🐣", nom: "Premiers pas",      desc: "Gagner ses 50 premiers XP" },
+    { id: "niv5",      emo: "⭐", nom: "Niveau 5",           desc: "Atteindre le niveau 5" },
+    { id: "niv10",     emo: "🌟", nom: "Niveau 10",          desc: "Atteindre le niveau 10" },
+    { id: "serie3",    emo: "🔥", nom: "Trois jours",        desc: "Jouer 3 jours d'affilée" },
+    { id: "serie7",    emo: "🔥", nom: "Une semaine",        desc: "Jouer 7 jours d'affilée" },
+    { id: "serie30",   emo: "🏅", nom: "Un mois entier",     desc: "Jouer 30 jours d'affilée" },
+    { id: "sansfaute", emo: "🎯", nom: "Sans faute",         desc: "Terminer une session sans aucune erreur" },
+    { id: "combo",     emo: "⚡", nom: "Combo",              desc: "Réussir un enchaînement ville → département" },
+    { id: "chrono10",  emo: "⏱️", nom: "Contre la montre",   desc: "10 bonnes réponses dans une session chrono" },
+    { id: "infirmerie",emo: "🚑", nom: "Infirmerie vidée",   desc: "Soigner toutes les cartes de l'infirmerie" },
+    { id: "dep50",     emo: "🧩", nom: "50 départements",    desc: "Maîtriser 50 départements" },
+    { id: "depAll",    emo: "🗺️", nom: "Toute la France",    desc: "Maîtriser les 96 départements" },
+    { id: "vil20",     emo: "🏙️", nom: "20 villes",          desc: "Maîtriser 20 villes" },
+    { id: "pays50",    emo: "🌍", nom: "50 pays",            desc: "Maîtriser 50 pays du monde" },
+    { id: "cap30",     emo: "🏛️", nom: "30 capitales",       desc: "Maîtriser 30 capitales" },
+    { id: "flg30",     emo: "🚩", nom: "30 drapeaux",        desc: "Maîtriser 30 drapeaux" },
+    { id: "plantes",   emo: "🌿", nom: "Botaniste",          desc: "Maîtriser les 20 plantes" },
+    { id: "histoire",  emo: "📜", nom: "Historien",          desc: "Maîtriser les 23 dates" },
+    { id: "etape1",    emo: "🚴", nom: "Première étape",     desc: "Gagner une étape du Tour de France" },
+    { id: "tour",      emo: "🏆", nom: "Tour de France",     desc: "Terminer les 13 étapes du Tour" },
+    { id: "maillot",   emo: "💛", nom: "Maillot jaune",      desc: "Décrocher les 39 étoiles du Tour" }
+];
+
+// ============================================================
+//   LE TOUR DE FRANCE
+//   13 étapes = 13 régions, dans une vraie boucle géographique,
+//   avec l'arrivée à Paris comme le vrai Tour.
+// ============================================================
+
+const TOUR_ETAPES = [
+    { reg: "Hauts-de-France",            court: "Nord",        emo: "⛏️", titre: "Le grand départ : terrils, beffrois et mer du Nord." },
+    { reg: "Normandie",                  court: "Normandie",   emo: "🐄", titre: "Cap à l'ouest par les plages du Débarquement." },
+    { reg: "Bretagne",                   court: "Bretagne",    emo: "🌊", titre: "La pointe de l'Europe, face à l'Atlantique." },
+    { reg: "Pays de la Loire",           court: "Loire",       emo: "⛵", titre: "On redescend la Loire jusqu'à l'océan." },
+    { reg: "Centre-Val de Loire",        court: "Centre",      emo: "🏰", titre: "Étape de plat entre les châteaux." },
+    { reg: "Nouvelle-Aquitaine",         court: "Aquitaine",   emo: "🍷", titre: "La plus grande région, des vignes aux Pyrénées." },
+    { reg: "Occitanie",                  court: "Occitanie",   emo: "☀️", titre: "Du pays cathare à la Méditerranée." },
+    { reg: "Provence-Alpes-Côte d'Azur", court: "PACA",        emo: "🏖️", titre: "Le seul coin qui a les Alpes ET la mer." },
+    { reg: "Corse",                      court: "Corse",       emo: "⛴️", titre: "Transfert en bateau vers l'Île de Beauté." },
+    { reg: "Auvergne-Rhône-Alpes",       court: "Alpes",       emo: "⛰️", titre: "L'étape reine : volcans puis haute montagne." },
+    { reg: "Bourgogne-Franche-Comté",    court: "Bourgogne",   emo: "🧀", titre: "Entre vignes et Jura, on remonte vers l'est." },
+    { reg: "Grand Est",                  court: "Grand Est",   emo: "🥨", titre: "Vosges, Alsace et Champagne avant la dernière ligne droite." },
+    { reg: "Île-de-France",              court: "Paris",       emo: "🏁", titre: "Arrivée sur les Champs-Élysées." }
+];

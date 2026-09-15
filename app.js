@@ -38,7 +38,7 @@ function openSettings() { document.getElementById('settings-modal').style.displa
 function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
 function saveAndCloseSettings() { saveSettings(); closeSettings(); showToast("Matières sauvegardées !", "#10b981", "✅"); }
 
-window.onload = () => { loadSettings(); };
+window.onload = () => { loadSettings(); initSonUI(); refreshDailyInfo(); };
 
 function saveSettings() { 
     const s = { 
@@ -103,6 +103,9 @@ let db = [], session = [], current = null, isWaiting = true, gameMode = 'daily',
 let lives = 3, isEndless = false; let zoomHandler, svgElement, mapGroup;
 let userXP = parseInt(localStorage.getItem('LearnV28_XP') || 0);
 let timerInterval = null; let timeLeft = 60; let isChronoMode = false;
+let sessionErreurs = 0, sessionBonnes = 0, sessionTotal = 0, chronoBonnes = 0;   // pour les étoiles, les trophées et le défi
+let session0Ids = [];   // les questions de la partie, telles quelles, pour pouvoir la repartager
+let etapeEnCours = 0, defiRecu = null;
 
 let geoFRDep = null, geoFRReg = null, geoWorld = null;
 let currentHeatmapMode = 'dep';
@@ -165,6 +168,7 @@ function addXP(amount) {
     floater.style.animation = 'floatUp 1s ease forwards';
     
     if(newLevel > oldLevel) { 
+        sonFanfare();
         shootConfetti();
         setTimeout(() => { showToast(`NIVEAU ${newLevel} ATTEINT ! 🎉`, "#8b5cf6", "⭐"); }, 500); 
     }
@@ -294,6 +298,9 @@ async function loadDataAndMap() {
 }
 
 function refreshDailyInfo() {
+    safeSetText('home-streak', texteSerie());
+    rafraichirTour();
+    afficherDefiRecu();
     if(db.length === 0) return;
     let revs = db.filter(i => i.next && i.next <= new Date().toISOString().split('T')[0] && i.rep > 0).length;
     safeSetText('daily-info', `${revs} révisions en attente aujourd'hui.`);
@@ -355,6 +362,8 @@ function calculerEtAfficherStats() {
     const chartContainer = document.getElementById('activity-chart');
     if(chartContainer) chartContainer.innerHTML = chartHtml;
 
+    afficherTrophees();
+
     // Appel au nouveau système d'affichage dynamique de la carte de chaleur
     drawHeatmap();
 }
@@ -412,6 +421,7 @@ async function launchGame(mode) {
     if(!isLoaded) { switchTab('home'); return; } 
 
     gameMode = mode; lives = 3; isEndless = false; isChronoMode = false; safeSetText('score-val', `${userXP}`);
+    sessionErreurs = 0; sessionBonnes = 0; chronoBonnes = 0;
     document.getElementById('timer-ui').style.display = 'none'; clearInterval(timerInterval); clearPendingNext();
 
     d3.selectAll(".departement").classed("dep-locked", false).classed("dep-unlocked", false);
@@ -431,6 +441,18 @@ async function launchGame(mode) {
         if(svgElement) svgElement.transition().duration(500).call(zoomHandler.transform, d3.zoomIdentity);
         isWaiting = false; return;
     }
+    else if(mode === 'tour') {
+        const e = TOUR_ETAPES[etapeEnCours];
+        safeSetText('game-title', `ÉTAPE ${etapeEnCours + 1} · ${e.court.toUpperCase()} ${e.emo}`);
+        pool = poolEtape(e.reg).sort(() => Math.random() - 0.5).slice(0, 8);
+        if(pool.length === 0) { showToast("Cette étape n'a pas encore de terrain de jeu.", "#f59e0b", "🚧"); switchTab('home'); return; }
+    }
+    else if(mode === 'defi') {
+        safeSetText('game-title', "LE DÉFI 🎯");
+        lives = -1;   // pas de game over : les deux joueurs doivent voir les mêmes questions
+        pool = defiRecu.q.map(id => db.find(i => i.id === id)).filter(Boolean);
+        if(pool.length === 0) { showToast("Ce défi ne correspond à aucune question connue.", "#f43f5e", "🤷"); switchTab('home'); return; }
+    }
     else if(mode === 'infirmary') {
         safeSetText('game-title', "L'INFIRMERIE 🚑"); pool = db.filter(i => i.rep === 0 && i.next);
         if(pool.length === 0) { showToast("Tout le monde est soigné !", "#10b981", "✨"); switchTab('home'); return; }
@@ -441,18 +463,7 @@ async function launchGame(mode) {
         if(mode === 'custom') { safeSetText('game-title', "QUIZ LIBRE"); customQuestionType = document.querySelector('input[name="mode"]:checked').value; }
         if(mode === 'revision') { safeSetText('game-title', "VISITE GUIDÉE 🧭"); customQuestionType = 'identify'; }
 
-        let basePool = [];
-        if(document.getElementById('opt-reg').checked) basePool = basePool.concat(db.filter(i => i.type === 'reg'));
-        if(document.getElementById('opt-dep').checked) basePool = basePool.concat(db.filter(i => i.type === 'dep' && i.unlocked));
-        if(document.getElementById('opt-vil').checked) basePool = basePool.concat(db.filter(i => i.type === 'vil'));
-        if(document.getElementById('opt-nat').checked) basePool = basePool.concat(db.filter(i => i.type === 'nature'));
-        if(document.getElementById('opt-eur-pays').checked) basePool = basePool.concat(db.filter(i => i.type === 'country' && i.domaine === 'europe'));
-        if(document.getElementById('opt-eur-cap').checked) basePool = basePool.concat(db.filter(i => i.type === 'cap' && i.domaine === 'europe'));
-        if(document.getElementById('opt-monde-pays').checked) basePool = basePool.concat(db.filter(i => i.type === 'country' && i.domaine === 'monde'));
-        if(document.getElementById('opt-monde-flg').checked) basePool = basePool.concat(db.filter(i => i.type === 'flag' && i.domaine === 'monde'));
-        if(document.getElementById('opt-monde-cap').checked) basePool = basePool.concat(db.filter(i => i.type === 'cap' && i.domaine === 'monde'));
-        if(document.getElementById('opt-pla').checked) basePool = basePool.concat(db.filter(i => i.type === 'pla'));
-        if(document.getElementById('opt-his').checked) basePool = basePool.concat(db.filter(i => i.type === 'his'));
+        let basePool = poolMatieres();
 
         if(basePool.length === 0) { showToast("Cochez au moins une matière dans les réglages !"); switchTab('home'); return; }
 
@@ -473,7 +484,7 @@ async function launchGame(mode) {
                 else { 
                     isEndless = true; pool = basePool.sort(()=>Math.random()-0.5); lives = (lenMode === 'survie') ? 3 : -1; 
                     if (lenMode === 'chrono') {
-                        isChronoMode = true; lives = -1; timeLeft = 60;
+                        isChronoMode = true; lives = -1; timeLeft = 60; chronoBonnes = 0;
                         document.getElementById('timer-ui').style.display = 'flex'; safeSetText('timer-val', timeLeft);
                         timerInterval = setInterval(() => {
                             timeLeft--; if (timeLeft <= 0) { timeLeft = 0; clearInterval(timerInterval); endGameChrono(); }
@@ -485,13 +496,20 @@ async function launchGame(mode) {
         }
     }
 
+    sessionTotal = pool.length;
+    session0Ids = pool.map(s => s.id);
     session = pool.map(s => {
         let selectedMode = customQuestionType === 'mix' ? (Math.random() > 0.5 ? 'locate' : 'identify') : customQuestionType;
-        let dynMode = (s.domaine === 'geographie' || s.type === 'country') ? ((gameMode === 'daily' || gameMode === 'infirmary') ? (Math.random() > 0.5 ? 'locate' : 'identify') : selectedMode) : 'identify';
+        let panache = ['daily', 'infirmary', 'tour'].includes(gameMode);
+        let dynMode = (s.domaine === 'geographie' || s.type === 'country') ? (panache ? (Math.random() > 0.5 ? 'locate' : 'identify') : selectedMode) : 'identify';
+        // Dans un défi, le mode est tiré du nom de la question : les deux
+        // joueurs tombent forcément sur la même chose.
+        if (gameMode === 'defi') dynMode = (s.domaine === 'geographie' || s.type === 'country')
+            ? ([...s.id].reduce((a, c) => a + c.charCodeAt(0), 0) % 2 ? 'locate' : 'identify') : 'identify';
         
         if (gameMode === 'revision') dynMode = 'identify';
 
-        if (s.type === 'vil' && dynMode === 'locate' && Math.random() > 0.7 && gameMode !== 'revision') {
+        if (s.type === 'vil' && dynMode === 'locate' && Math.random() > 0.7 && gameMode !== 'revision' && gameMode !== 'defi') {
             let crossType = Math.random() > 0.5 ? 'dep' : 'reg';
             let targetName = crossType === 'dep' ? s.dep : s.reg;
             let targetObj = db.find(i => i.type === crossType && i.nom === targetName);
@@ -524,10 +542,21 @@ function askQuestion() {
             document.getElementById('flashcard-ui').style.display = 'none'; 
             safeSetText('q-counter', "");
             
-            if (gameMode !== 'revision') { showToast("Session validée ! +20 XP Bonus", "#8b5cf6", "⭐"); addXP(20); } 
+            if (gameMode === 'tour') { terminerEtape(); }
+            else if (gameMode === 'defi') { terminerDefi(); }
+            else if (gameMode !== 'revision') {
+                showToast("Session validée ! +20 XP Bonus", "#8b5cf6", "⭐"); addXP(20);
+                if (gameMode === 'infirmary') poserFlag('infirmerie');
+                if (gameMode === 'custom' && sessionTotal >= 5) {
+                    localStorage.setItem('LearnV28_DernierDefi', JSON.stringify({ ids: session0Ids, score: sessionBonnes, total: sessionTotal }));
+                }
+            }
             else { showToast("Visite terminée !", "#10b981", "✨"); }
-            
-            setTimeout(() => switchTab('home'), 2000);
+
+            if (gameMode !== 'revision' && sessionErreurs === 0 && sessionTotal >= 5) poserFlag('sansfaute');
+            if (gameMode !== 'revision') verifierTrophees();
+
+            setTimeout(() => switchTab('home'), gameMode === 'tour' || gameMode === 'defi' ? 3500 : 2000);
             return;
         } else {
             let basePool = db.filter(i => i.domaine === 'geographie' || i.domaine === 'europe' || i.domaine === 'monde');
@@ -605,7 +634,9 @@ function askQuestion() {
             let titleText = current.nom;
             if(current.isCombo) titleText = current.comboMsg;
             if(current.isCross) titleText = current.customMsg;
-            safeSetText('q-target', titleText); 
+            // comboMsg contient du <b> et des retours à la ligne : innerText
+            // les affichait en toutes lettres.
+            document.getElementById('q-target').innerHTML = titleText.replace(/\n/g, '<br>'); 
             document.getElementById('flashcard-ui').style.display = 'none';
             document.getElementById('interface-carte').className = "interface-wrapper active mode-locate-" + current.type;
             if(current.niveau === 1 && !isChronoMode) {
@@ -718,6 +749,10 @@ function evaluateAnswer(isGood) {
     if(isGood) {
         let gain = gameMode === 'infirmary' ? 15 : (current.niveau === 1 ? 5 : 10); 
         if(current.isCombo) gain *= 2; 
+        current.isCombo ? sonCombo() : sonJuste();
+        if(!current.fail && !current.isCombo && !current.isCross) sessionBonnes++;
+        if(current.isCombo) poserFlag('combo');
+        if(isChronoMode) { chronoBonnes++; if(chronoBonnes >= 10) poserFlag('chrono10'); }
         addXP(gain);
         
         if(current.domaine === 'geographie' || current.type === 'country') {
@@ -725,7 +760,7 @@ function evaluateAnswer(isGood) {
         }
 
         if (current.dynMode === 'locate') {
-            if (current.type === 'vil' && !current.isCombo && !current.isCross && Math.random() > 0.6) {
+            if (current.type === 'vil' && !current.isCombo && !current.isCross && gameMode !== 'defi' && Math.random() > 0.6) {
                 let depObj = db.find(i => i.type === 'dep' && i.nom === current.dep);
                 if (depObj) {
                     let comboDep = { ...depObj, isCombo: true, comboMsg: `⚡ Bien joué pour <b>${current.nom}</b> !\nTrouve son département :`, refReg: current.reg, fail: false, niveau: 2, dynMode: 'locate' };
@@ -792,6 +827,8 @@ function evaluateAnswer(isGood) {
 }
 
 function handleError() {
+    sonFaux();
+    sessionErreurs++;
     if(window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
     d3.select("#g-villes").selectAll(".ville-point").style("opacity", 1);
     
@@ -1106,3 +1143,332 @@ function toggleReadingPause() {
 }
 
 function goToNextQuestion() { clearPendingNext(); askQuestion(); }
+
+// ============================================================
+//   LE SON
+//   Tout est fabriqué à la volée avec WebAudio : aucun fichier à
+//   héberger, aucun téléchargement, ça marche hors ligne.
+// ============================================================
+
+let audioCtx = null;
+let sonActif = localStorage.getItem('LearnV28_Son') !== 'false';
+
+function initSonUI() {
+    const b = document.getElementById('sound-btn');
+    if (b) b.innerText = sonActif ? "🔊" : "🔇";
+}
+
+function toggleSon() {
+    sonActif = !sonActif;
+    localStorage.setItem('LearnV28_Son', sonActif);
+    initSonUI();
+    if (sonActif) sonJuste();
+}
+
+// notes = [[fréquence en Hz, départ en s, durée en s], ...]
+function jouer(notes, type = "sine", volume = 0.14) {
+    if (!sonActif) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        notes.forEach(([freq, debut, duree]) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = type; o.frequency.value = freq;
+            const t = audioCtx.currentTime + debut;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(volume, t + 0.012);
+            g.gain.exponentialRampToValueAtTime(0.001, t + duree);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(t); o.stop(t + duree + 0.02);
+        });
+    } catch (e) { /* pas de son disponible : tant pis, le jeu continue */ }
+}
+
+function sonJuste()   { jouer([[660, 0, 0.12], [880, 0.09, 0.18]]); }
+function sonCombo()   { jouer([[660, 0, 0.1], [880, 0.08, 0.1], [1174, 0.16, 0.26]]); }
+function sonFaux()    { jouer([[220, 0, 0.18], [165, 0.12, 0.28]], "triangle", 0.11); }
+function sonFanfare() { jouer([[523, 0, 0.14], [659, 0.12, 0.14], [784, 0.24, 0.14], [1046, 0.36, 0.42]]); }
+function sonEtoile()  { jouer([[784, 0, 0.1], [988, 0.08, 0.1], [1318, 0.16, 0.3]]); }
+
+// ============================================================
+//   LA SÉRIE DE JOURS
+//   L'historique quotidien d'XP existait déjà : la flamme se
+//   déduit, il n'y a rien de plus à stocker.
+// ============================================================
+
+function jourISO(d) { return d.toISOString().split('T')[0]; }
+
+function calculerSerie() {
+    const history = JSON.parse(localStorage.getItem('LearnV28_History') || '{}');
+    let d = new Date();
+    // Rien aujourd'hui ? La série tient encore si on a joué hier.
+    if (!history[jourISO(d)]) d.setDate(d.getDate() - 1);
+    let serie = 0;
+    while (history[jourISO(d)] > 0) { serie++; d.setDate(d.getDate() - 1); }
+    return serie;
+}
+
+function meilleureSerie() {
+    const jours = Object.keys(JSON.parse(localStorage.getItem('LearnV28_History') || '{}')).sort();
+    let best = 0, courante = 0, precedent = null;
+    jours.forEach(j => {
+        const veille = new Date(j); veille.setDate(veille.getDate() - 1);
+        courante = (precedent === jourISO(veille)) ? courante + 1 : 1;
+        best = Math.max(best, courante);
+        precedent = j;
+    });
+    return best;
+}
+
+function texteSerie() {
+    const s = calculerSerie(), best = meilleureSerie();
+    if (s === 0) return "Mon Atlas Personnel";
+    const jour = s > 1 ? "jours" : "jour";
+    return `🔥 ${s} ${jour} d'affilée` + (best > s ? ` · record ${best}` : " · c'est ton record !");
+}
+
+// ============================================================
+//   LES TROPHÉES
+// ============================================================
+
+function lireFlags() { return JSON.parse(localStorage.getItem('LearnV28_Flags') || '{}'); }
+function poserFlag(nom) { const f = lireFlags(); if (!f[nom]) { f[nom] = true; localStorage.setItem('LearnV28_Flags', JSON.stringify(f)); } }
+
+function trophesObtenus() {
+    const f = lireFlags(), obtenus = [];
+    const maitrises = t => db.filter(i => i.type === t && i.rep > 0).length;
+    const niveau = Math.floor(Math.sqrt(userXP / 50)) + 1;
+    const serie = calculerSerie();
+    const etoiles = Object.values(lireTour()).reduce((a, b) => a + b, 0);
+    const etapes = Object.keys(lireTour()).length;
+
+    const tests = {
+        debut: userXP >= 50, niv5: niveau >= 5, niv10: niveau >= 10,
+        serie3: serie >= 3, serie7: serie >= 7, serie30: serie >= 30,
+        sansfaute: !!f.sansfaute, combo: !!f.combo, chrono10: !!f.chrono10, infirmerie: !!f.infirmerie,
+        dep50: maitrises('dep') >= 50, depAll: maitrises('dep') >= 96,
+        vil20: maitrises('vil') >= 20, pays50: maitrises('country') >= 50,
+        cap30: maitrises('cap') >= 30, flg30: maitrises('flag') >= 30,
+        plantes: maitrises('pla') >= 20, histoire: maitrises('his') >= 23,
+        etape1: etapes >= 1, tour: etapes >= TOUR_ETAPES.length, maillot: etoiles >= TOUR_ETAPES.length * 3
+    };
+    TROPHEES.forEach(t => { if (tests[t.id]) obtenus.push(t.id); });
+    return obtenus;
+}
+
+// Annonce les trophées tout juste décrochés (appelé en fin de session)
+function verifierTrophees() {
+    const obtenus = trophesObtenus();
+    const connus = JSON.parse(localStorage.getItem('LearnV28_Trophees') || '[]');
+    const nouveaux = obtenus.filter(id => !connus.includes(id));
+    localStorage.setItem('LearnV28_Trophees', JSON.stringify(obtenus));
+    nouveaux.forEach((id, i) => {
+        const t = TROPHEES.find(x => x.id === id);
+        setTimeout(() => { sonEtoile(); shootConfetti(); showToast(`Trophée débloqué : <b>${t.nom}</b>`, "#8b5cf6", t.emo); }, 600 + i * 1800);
+    });
+    return nouveaux;
+}
+
+function afficherTrophees() {
+    const grille = document.getElementById('trophy-grid');
+    if (!grille) return;
+    const obtenus = trophesObtenus();
+    safeSetText('trophy-count', `${obtenus.length}/${TROPHEES.length}`);
+    const serie = calculerSerie();
+    safeSetText('trophy-streak', serie > 0 ? `🔥 Série en cours : ${serie} j · record ${meilleureSerie()} j` : "Joue aujourd'hui pour lancer ta série 🔥");
+    // On passe par l'identifiant : les descriptions contiennent des
+    // apostrophes, qui casseraient un onclick écrit en toutes lettres.
+    grille.innerHTML = TROPHEES.map(t => {
+        const ok = obtenus.includes(t.id);
+        return `<div class="trophy ${ok ? 'gagne' : ''}" onclick="detailTrophee('${t.id}')">
+                    <span class="trophy-emo">${t.emo}</span><span class="trophy-nom">${t.nom}</span>
+                </div>`;
+    }).join('');
+}
+
+function detailTrophee(id) {
+    const t = TROPHEES.find(x => x.id === id);
+    if (!t) return;
+    const gagne = trophesObtenus().includes(id);
+    showToast(`<b>${t.nom}</b><br>${t.desc}` + (gagne ? " ✅" : ""), gagne ? "#8b5cf6" : "#64748b", t.emo);
+}
+
+// ============================================================
+//   LE TOUR DE FRANCE (le parcours)
+//   Une étape = une région. On ne pioche que dans son territoire,
+//   et les étoiles dépendent du nombre de fautes.
+// ============================================================
+
+function lireTour() { return JSON.parse(localStorage.getItem('LearnV28_Tour') || '{}'); }
+
+function etapeCourante() {
+    const tour = lireTour();
+    const i = TOUR_ETAPES.findIndex(e => !tour[e.reg]);
+    return i === -1 ? TOUR_ETAPES.length - 1 : i;   // tout fini : on reste sur la dernière
+}
+
+function etoilesTotales() { return Object.values(lireTour()).reduce((a, b) => a + b, 0); }
+
+function etoilesTexte(n) { return "⭐".repeat(n) + "☆".repeat(3 - n); }
+
+function rafraichirTour() {
+    const tour = lireTour(), courante = etapeCourante();
+    const fini = Object.keys(tour).length === TOUR_ETAPES.length;
+    const e = TOUR_ETAPES[courante];
+
+    safeSetText('tour-count', `⭐ ${etoilesTotales()}/${TOUR_ETAPES.length * 3}`);
+    safeSetText('tour-info', fini ? "Tour terminé ! Rejoue une étape pour décrocher les étoiles qui manquent."
+                                  : `Étape ${courante + 1}/${TOUR_ETAPES.length} · ${e.reg}`);
+    safeSetText('tour-titre', fini ? "🏁 Bravo, tu as bouclé la boucle." : `${e.emo} ${e.titre}`);
+    safeSetText('tour-btn', fini ? "Rejouer une étape" : `Prendre le départ`);
+
+    const bande = document.getElementById('tour-strip');
+    if (bande) {
+        bande.innerHTML = TOUR_ETAPES.map((et, i) => {
+            const etoiles = tour[et.reg] || 0;
+            const ouverte = i === 0 || tour[TOUR_ETAPES[i - 1].reg];
+            const classe = etoiles ? "faite" : (i === courante ? "courante" : (ouverte ? "" : "fermee"));
+            return `<div class="etape ${classe}" onclick="lancerEtape(${i})">
+                        <span class="etape-num">${ouverte || etoiles ? et.emo : "🔒"}</span>
+                        <span class="etape-nom">${et.court}</span>
+                        <span class="etape-etoiles">${etoiles ? etoilesTexte(etoiles) : "☆☆☆"}</span>
+                    </div>`;
+        }).join('');
+        const active = bande.querySelector('.courante') || bande.querySelector('.etape');
+        if (active) bande.scrollLeft = Math.max(0, active.offsetLeft - 90);
+    }
+}
+
+// Le contenu d'une étape : uniquement la région, ses départements et ses villes
+function poolEtape(reg) {
+    const deps = db.filter(i => i.type === 'dep' && DEP_REGIONS[i.code] === reg);
+    const villes = db.filter(i => i.type === 'vil' && i.reg === reg);
+    const region = db.filter(i => i.type === 'reg' && i.nom === reg);
+    return [...region, ...deps, ...villes];
+}
+
+async function lancerEtape(index) {
+    const tour = lireTour();
+    if (index > 0 && !tour[TOUR_ETAPES[index - 1].reg]) {
+        return showToast(`Termine d'abord l'étape ${index} : <b>${TOUR_ETAPES[index - 1].court}</b>`, "#f59e0b", "🔒");
+    }
+    etapeEnCours = index;
+    await launchGame('tour');
+}
+
+function lancerEtapeCourante() { lancerEtape(etapeCourante()); }
+
+// Fin d'étape : les étoiles, le déblocage des départements dans l'Atlas
+function terminerEtape() {
+    const e = TOUR_ETAPES[etapeEnCours];
+    const etoiles = sessionErreurs === 0 ? 3 : (sessionErreurs === 1 ? 2 : 1);
+    const tour = lireTour();
+    const avant = tour[e.reg] || 0;
+    tour[e.reg] = Math.max(avant, etoiles);
+    localStorage.setItem('LearnV28_Tour', JSON.stringify(tour));
+
+    // La région conquise s'ouvre dans l'Atlas
+    let unlocked = JSON.parse(localStorage.getItem('LearnV28_UnlockedDeps') || JSON.stringify(STARTER_DEPS));
+    Object.keys(DEP_REGIONS).filter(code => DEP_REGIONS[code] === e.reg).forEach(code => {
+        if (!unlocked.includes(code)) unlocked.push(code);
+        const d = db.find(i => i.type === 'dep' && i.code === code); if (d) d.unlocked = true;
+    });
+    localStorage.setItem('LearnV28_UnlockedDeps', JSON.stringify(unlocked));
+
+    safeSetText('q-target', `${e.emo} Étape gagnée !`);
+    safeSetText('q-question', `${e.reg} · ${etoilesTexte(etoiles)}`);
+    sonFanfare(); shootConfetti();
+    showToast(`<b>${e.reg}</b> conquise ! ${etoilesTexte(etoiles)}<br>Ses départements rejoignent ton Atlas.`, "#10b981", e.emo);
+    addXP(30);
+}
+
+// ============================================================
+//   LE DÉFI PARTAGEABLE
+//   Tout tient dans le lien : les 10 questions et le score à
+//   battre. Aucun serveur, aucun compte.
+// ============================================================
+
+function encoderDefi(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function decoderDefi(txt) { try { return JSON.parse(decodeURIComponent(escape(atob(txt)))); } catch (e) { return null; } }
+
+function lireDefiURL() {
+    const h = location.hash || "";
+    if (!h.startsWith('#defi=')) return null;
+    const d = decoderDefi(h.slice(6));
+    return (d && Array.isArray(d.q) && d.q.length) ? d : null;
+}
+
+function lienDefi(ids, score, total) {
+    return location.origin + location.pathname + "#defi=" + encoderDefi({ q: ids, s: score, t: total });
+}
+
+async function partagerDefi(ids, score, total) {
+    if (!ids) {
+        const dernier = JSON.parse(localStorage.getItem('LearnV28_DernierDefi') || 'null');
+        if (dernier) { ids = dernier.ids; score = dernier.score; total = dernier.total; }
+        else {
+            if (!await loadDataAndMap()) return;
+            const pool = poolMatieres();
+            if (!pool.length) return showToast("Coche au moins une matière dans les réglages !", "#f59e0b", "⚙️");
+            ids = pool.sort(() => Math.random() - 0.5).slice(0, 10).map(i => i.id);
+            score = -1; total = ids.length;
+        }
+    }
+    const url = lienDefi(ids, score, total);
+    const texte = score >= 0 ? `Je fais ${score}/${total} sur ce défi. Tu fais mieux ?` : "Je te défie sur 10 questions !";
+    try {
+        if (navigator.share) { await navigator.share({ title: "Défi LearnDaily", text: texte, url }); return; }
+        await navigator.clipboard.writeText(url);
+        showToast("Lien copié ! Envoie-le à qui tu veux 🎯", "#8b5cf6", "🔗");
+    } catch (e) {
+        if (e && e.name === 'AbortError') return;   // partage annulé par l'utilisateur
+        prompt("Copie ce lien et envoie-le :", url);
+    }
+}
+
+function afficherDefiRecu() {
+    defiRecu = lireDefiURL();
+    const carte = document.getElementById('defi-card');
+    if (!carte) return;
+    carte.style.display = defiRecu ? 'block' : 'none';
+    if (defiRecu) {
+        safeSetText('defi-info', defiRecu.s >= 0
+            ? `${defiRecu.q.length} questions · score à battre : ${defiRecu.s}/${defiRecu.t}`
+            : `${defiRecu.q.length} questions, les mêmes pour vous deux.`);
+    }
+}
+
+function terminerDefi() {
+    const total = sessionTotal, score = sessionBonnes;
+    const aBattre = defiRecu && defiRecu.s >= 0 ? defiRecu.s : null;
+    let msg = `Ton score : <b>${score}/${total}</b>`;
+    if (aBattre !== null) msg += score > aBattre ? " — tu gagnes ! 🏆" : (score === aBattre ? " — égalité !" : ` — raté, il fallait battre ${aBattre}.`);
+    safeSetText('q-target', `${score}/${total}`);
+    safeSetText('q-question', aBattre !== null ? (score > aBattre ? "Défi remporté ! 🏆" : "Défi relevé.") : "Défi terminé.");
+    showToast(msg, score > (aBattre ?? -1) ? "#10b981" : "#8b5cf6", "🎯");
+    if (score > (aBattre ?? -1)) { sonFanfare(); shootConfetti(); }
+    localStorage.setItem('LearnV28_DernierDefi', JSON.stringify({ ids: defiRecu.q, score, total }));
+    location.hash = "";
+    defiRecu = null;
+}
+
+// Les matières cochées dans les réglages, au même endroit pour le Quiz
+// Libre et pour le défi.
+function poolMatieres() {
+    const coche = id => document.getElementById(id).checked;
+    let pool = [];
+    if(coche('opt-reg')) pool = pool.concat(db.filter(i => i.type === 'reg'));
+    if(coche('opt-dep')) pool = pool.concat(db.filter(i => i.type === 'dep' && i.unlocked));
+    if(coche('opt-vil')) pool = pool.concat(db.filter(i => i.type === 'vil'));
+    if(coche('opt-nat')) pool = pool.concat(db.filter(i => i.type === 'nature'));
+    if(coche('opt-eur-pays')) pool = pool.concat(db.filter(i => i.type === 'country' && i.domaine === 'europe'));
+    if(coche('opt-eur-cap')) pool = pool.concat(db.filter(i => i.type === 'cap' && i.domaine === 'europe'));
+    if(coche('opt-monde-pays')) pool = pool.concat(db.filter(i => i.type === 'country' && i.domaine === 'monde'));
+    if(coche('opt-monde-flg')) pool = pool.concat(db.filter(i => i.type === 'flag' && i.domaine === 'monde'));
+    if(coche('opt-monde-cap')) pool = pool.concat(db.filter(i => i.type === 'cap' && i.domaine === 'monde'));
+    if(coche('opt-pla')) pool = pool.concat(db.filter(i => i.type === 'pla'));
+    if(coche('opt-his')) pool = pool.concat(db.filter(i => i.type === 'his'));
+    return pool;
+}
+
+async function lancerDefi() { if (!defiRecu) return; await launchGame('defi'); }

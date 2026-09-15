@@ -258,3 +258,41 @@ svg#svg-carte { width: 100%; height: 100%; touch-action: none; }
 .read-fill.paused { background: var(--warning); }
 .read-hint { font-size: 11px; color: var(--muted); font-weight: 600; }
 .btn-continue { width: 100%; background: var(--success); padding: 12px; }
+
+/* LE COMBO : les classes existaient déjà, mais n'avaient aucun style */
+.question-panel.combo-mode, .question-panel.cross-mode { border: 2px solid var(--warning); box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15); animation: comboPop 0.4s ease; }
+.question-panel.cross-mode { border-color: var(--xp); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+.question-panel.combo-mode::before, .question-panel.cross-mode::before {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--warning); color: white; font-size: 11px; font-weight: 800;
+    padding: 4px 12px; border-radius: 20px; letter-spacing: 0.5px; white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);
+}
+.question-panel.combo-mode::before { content: "⚡ COMBO x2"; }
+.question-panel.cross-mode::before { content: "🎲 DÉFI CROISÉ"; background: var(--xp); box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4); }
+@keyframes comboPop { 0% { transform: scale(0.97); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+/* LE TOUR DE FRANCE : la bande des étapes */
+.tour-strip { display: flex; gap: 8px; overflow-x: auto; padding: 14px 2px; scrollbar-width: none; }
+.tour-strip::-webkit-scrollbar { display: none; }
+.etape { flex: 0 0 auto; width: 74px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 14px; padding: 8px 4px; text-align: center; cursor: pointer; transition: 0.2s; }
+.etape:active { transform: scale(0.96); }
+.etape-num { display: block; font-size: 20px; line-height: 1.2; }
+.etape-nom { display: block; font-size: 10px; font-weight: 700; color: var(--muted); margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.etape-etoiles { display: block; font-size: 9px; letter-spacing: -1px; }
+.etape.faite { background: rgba(16, 185, 129, 0.12); border-color: var(--success); }
+.etape.faite .etape-nom { color: var(--success); }
+.etape.courante { background: rgba(245, 158, 11, 0.15); border-color: var(--warning); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+.etape.courante .etape-nom { color: var(--warning); }
+.etape.fermee { opacity: 0.45; }
+[data-theme="dark"] .etape { background: rgba(0,0,0,0.2); }
+
+/* LES TROPHÉES */
+.trophy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 8px; }
+.trophy { background: var(--bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 8px 3px; text-align: center; cursor: pointer; opacity: 0.45; filter: grayscale(1); transition: 0.2s; }
+.trophy.gagne { opacity: 1; filter: none; background: rgba(139, 92, 246, 0.1); border-color: var(--xp); }
+.trophy:active { transform: scale(0.95); }
+.trophy-emo { display: block; font-size: 22px; }
+.trophy-nom { display: block; font-size: 9px; font-weight: 700; color: var(--muted); margin-top: 3px; line-height: 1.2; }
+.trophy.gagne .trophy-nom { color: var(--text); }
+[data-theme="dark"] .trophy { background: rgba(0,0,0,0.2); }

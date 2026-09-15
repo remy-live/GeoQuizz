@@ -26,11 +26,12 @@
         <div class="header">
             <div>
                 <h1>LearnDaily</h1>
-                <p class="subtitle">Mon Atlas Personnel</p>
+                <p class="subtitle" id="home-streak">Mon Atlas Personnel</p>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button id="pwa-btn" class="nav-btn" onclick="installerPWA()" style="display: none; font-size: 1.5rem; padding: 5px; flex: none;" title="Installer l'app">📥</button>
                 <button class="nav-btn" onclick="openSettings()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Gérer mes Matières">⚙️</button>
+                <button id="sound-btn" class="nav-btn" onclick="toggleSon()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Son">🔊</button>
                 <button id="theme-btn" class="nav-btn" onclick="toggleTheme()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Thème">🌙</button>
             </div>
         </div>
@@ -39,6 +40,23 @@
             <h2>Mission du Jour 📅</h2>
             <p class="subtitle" id="daily-info">Chargement...</p>
             <button class="btn-primary" onclick="launchGame('daily')" style="margin-top: 15px; width: 100%;">Jouer la Mission</button>
+        </div>
+
+        <div class="card" id="defi-card" style="display: none; border: 2px solid var(--xp);">
+            <h2>Un défi t'attend 🎯</h2>
+            <p class="subtitle" id="defi-info">10 questions</p>
+            <button class="btn-primary" onclick="lancerDefi()" style="margin-top: 15px; width: 100%; background: var(--xp);">Relever le défi</button>
+        </div>
+
+        <div class="card" id="tour-card">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <h2>Le Tour de France 🚴</h2>
+                <span id="tour-count" style="font-weight: 800; font-size: 13px; color: var(--warning);">⭐ 0/39</span>
+            </div>
+            <p class="subtitle" id="tour-info">Étape 1/13</p>
+            <p class="subtitle" id="tour-titre" style="margin-top: 4px; font-style: italic;"></p>
+            <div class="tour-strip" id="tour-strip"></div>
+            <button class="btn-primary" id="tour-btn" onclick="lancerEtapeCourante()" style="margin-top: 5px; width: 100%; background: var(--warning);">Prendre le départ</button>
         </div>
 
         <div class="card" id="infirmary-card" style="display: none; border: 2px solid var(--danger);">
@@ -76,6 +94,7 @@
             </div>
 
             <button class="btn-primary" onclick="launchGame('custom')" style="margin-top: 15px; width: 100%; background: var(--xp);">Lancer le Quiz Libre</button>
+            <button class="btn-secondary" onclick="partagerDefi()" style="margin-top: 8px;">🎯 Défier un ami</button>
         </div>
     </div>
 
@@ -89,6 +108,14 @@
                 <div class="xp-bar-container"><div class="xp-bar-fill" id="xp-bar" style="width: 0%;"></div></div>
                 <p class="subtitle" style="font-size:0.8rem; margin-top:4px;" id="xp-text">0/50 XP</p>
             </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header" style="display: flex; justify-content: space-between;">
+                <span>🏆 Mes trophées</span><span id="trophy-count" style="color: var(--xp);">0/21</span>
+            </div>
+            <p class="subtitle" id="trophy-streak" style="margin-bottom: 15px;"></p>
+            <div class="trophy-grid" id="trophy-grid"></div>
         </div>
 
         <div class="stat-card">
