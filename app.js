@@ -204,7 +204,7 @@ const URLS_MONDE = [
     "https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/DATA/world.geojson"
 ];
 
-let carteChargee = false, zoomPret = false;
+let carteChargee = false, mondeCharge = false, zoomPret = false;
 
 // Essaie chaque miroir à son tour. Ne lève jamais : renvoie null si tout échoue.
 async function chargerJSON(urls, ms) {
@@ -239,9 +239,21 @@ function preparerSVG() {
 }
 
 async function loadDataAndMap() {
-    if (carteChargee) return true;   // on ne recharge que si la dernière tentative a échoué
+    if (carteChargee && mondeCharge) return true;
 
     if (typeof d3 === 'undefined') { showToast("Outils en cours de téléchargement (réseau lent).", "#f59e0b", "⏳"); return false; }
+
+    // La France est là mais pas le monde : on ne retente que ce qui manque,
+    // au lieu de rester bloqué sans pays ni capitales pour toute la session.
+    if (carteChargee && !mondeCharge) {
+        const [geoMonde, pays] = await Promise.all([chargerJSON(URLS_MONDE, 15000), chargerPays(15000)]);
+        if (geoMonde && pays.length) {
+            construireMonde(geoMonde, pays);
+            appliquerProgression();
+            refreshDailyInfo(); calculerEtAfficherStats();
+        }
+        return true;
+    }
 
     preparerSVG();
     safeSetText('q-target', "Chargement de la carte…");
@@ -284,21 +296,8 @@ async function loadDataAndMap() {
     d3.select("#g-regions-outlines").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region-outline");
 
     // Le monde est un bonus : s'il manque, la France se joue quand même
-    if (worldGeojson && apiData.length) {
-        geoWorld = worldGeojson;
-        construireInfosMonde(apiData);
-        apiData.forEach(c => {
-            const info = WORLD_INFO[c.cca3]; if(!info) return;
-            let dom = c.region === "Europe" ? "europe" : "monde";
-            let hasSvg = worldGeojson.features.some(f => f.id === c.cca3);
-            db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
-            if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
-            if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
-        });
-        d3.select("#g-world").selectAll("path").data(worldGeojson.features).enter().append("path").attr("d", pathWorld).attr("class", "pays-monde").attr("id", d => "w_" + d.id).on("click", function(e, d) { handleMapClick(this, "w_" + d.id); });
-    } else {
-        showToast("Les données du monde n'ont pas répondu : la France reste jouable.", "#f59e0b", "🌍");
-    }
+    if (worldGeojson && apiData.length) construireMonde(worldGeojson, apiData);
+    else showToast("Les données du monde n'ont pas répondu : la France reste jouable.", "#f59e0b", "🌍");
 
     const lineFleuve = d3.line().x(d => projFR(d)[0]).y(d => projFR(d)[1]).curve(d3.curveCatmullRom);
     const lineMassif = d3.line().x(d => projFR(d)[0]).y(d => projFR(d)[1]).curve(d3.curveCatmullRomClosed);
@@ -333,13 +332,7 @@ async function loadDataAndMap() {
             handleMapClick(document.getElementById(d.id), d.id);
         });
 
-    let saved = localStorage.getItem('LearnV28_Master') || localStorage.getItem('LearnV27_Master');
-    if (saved) {
-        let savedDB = JSON.parse(saved);
-        db = db.map(item => { let s = savedDB.find(x => x.id === item.id); return s ? {...item, rep: s.rep, next: s.next, failCount: s.failCount} : {...item, failCount: 0}; });
-    } else {
-        db = db.map(item => ({...item, failCount: item.failCount || 0}));
-    }
+    appliquerProgression();
 
     carteChargee = true;
     refreshDailyInfo(); updateXPUI(); calculerEtAfficherStats();
@@ -514,7 +507,13 @@ async function launchGame(mode) {
 
         let basePool = poolMatieres();
 
-        if(basePool.length === 0) { showToast("Cochez au moins une matière dans les réglages !"); switchTab('home'); return; }
+        if(basePool.length === 0) {
+            // Ne pas accuser le joueur quand ce sont les données qui manquent
+            const coches = document.querySelectorAll('input[id^="opt-"]:checked').length;
+            if (coches === 0) showToast("Coche au moins une matière dans les réglages !", "#f59e0b", "⚙️");
+            else showToast("Tes matières cochées sont celles du monde, et ces données n'ont pas pu être chargées.<br>Vérifie ta connexion, ou coche une matière France.", "#f43f5e", "📡");
+            switchTab('home'); return;
+        }
 
         if (mode === 'daily') {
             const today = new Date().toISOString().split('T')[0];
@@ -1579,3 +1578,36 @@ function poolMatieres() {
 }
 
 async function lancerDefi() { if (!defiRecu) return; await launchGame('defi'); }
+
+// Le monde (pays, capitales, drapeaux) se construit à part : il peut
+// arriver après coup, quand une première tentative a échoué.
+function construireMonde(worldGeojson, apiData) {
+    geoWorld = worldGeojson;
+    construireInfosMonde(apiData);
+    const projWorld = d3.geoMercator().scale(80).translate([250, 320]);
+    const pathWorld = d3.geoPath().projection(projWorld);
+
+    db = db.filter(i => !['flag', 'cap', 'country'].includes(i.type));   // pas de doublons si on retente
+    apiData.forEach(c => {
+        const info = WORLD_INFO[c.cca3]; if(!info) return;
+        let dom = c.region === "Europe" ? "europe" : "monde";
+        let hasSvg = worldGeojson.features.some(f => f.id === c.cca3);
+        db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
+        if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
+        if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
+    });
+
+    d3.select("#g-world").selectAll("*").remove();
+    d3.select("#g-world").selectAll("path").data(worldGeojson.features).enter().append("path").attr("d", pathWorld).attr("class", "pays-monde").attr("id", d => "w_" + d.id).on("click", function(e, d) { handleMapClick(this, "w_" + d.id); });
+    mondeCharge = true;
+}
+
+// Réapplique les réussites et les erreurs enregistrées sur la base en mémoire
+function appliquerProgression() {
+    const saved = localStorage.getItem('LearnV28_Master') || localStorage.getItem('LearnV27_Master');
+    const savedDB = saved ? JSON.parse(saved) : [];
+    db = db.map(item => {
+        const s = savedDB.find(x => x.id === item.id);
+        return s ? {...item, rep: s.rep, next: s.next, failCount: s.failCount} : {...item, failCount: item.failCount || 0};
+    });
+}
