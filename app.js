@@ -132,18 +132,39 @@ const IMAGE_INDISPO = "data:image/svg+xml;utf8," + encodeURIComponent(
         <text x="300" y="330" font-family="sans-serif" font-size="30" font-weight="bold" fill="#64748b" text-anchor="middle">Photo indisponible</text>
     </svg>`);
 
-// Renvoie { url, ok } : l'appelant doit savoir si la photo est bien là.
-function preloadImage(url) {
+function testerImage(url, ms) {
     return new Promise((resolve) => {
-        if (!url) return resolve({ url: IMAGE_INDISPO, ok: false });
         const img = new Image();
         let fini = false;
-        const terminer = (ok) => { if (fini) return; fini = true; clearTimeout(timer); resolve({ url: ok ? url : IMAGE_INDISPO, ok }); };
-        const timer = setTimeout(() => terminer(false), 8000);   // 3 s, c'était court en 4G
+        const terminer = (ok) => { if (fini) return; fini = true; clearTimeout(timer); resolve(ok); };
+        const timer = setTimeout(() => terminer(false), ms);
         img.onload = () => terminer(true);
         img.onerror = () => terminer(false);
         img.src = url;
     });
+}
+
+// Deux échecs d'affilée sur une image distante : le réseau la bloque sans
+// doute. On passe directement aux fichiers du dépôt pour le reste de la
+// session, au lieu d'attendre à chaque question.
+let echecsDistants = 0;
+const estDistante = (url) => /^https?:/.test(url);
+
+// Essaie les sources dans l'ordre et renvoie { url, ok } : l'appelant doit
+// savoir si l'image est bien là.
+async function preloadImage(sources) {
+    let liste = (Array.isArray(sources) ? sources : [sources]).filter(Boolean);
+    if (echecsDistants >= 2) liste = [...liste.filter(u => !estDistante(u)), ...liste.filter(estDistante)];
+
+    for (const url of liste) {
+        const distante = estDistante(url);
+        if (await testerImage(url, distante ? 5000 : 3000)) {
+            if (distante) echecsDistants = 0;
+            return { url, ok: true };
+        }
+        if (distante) echecsDistants++;
+    }
+    return { url: IMAGE_INDISPO, ok: false };
 }
 
 function safeSetText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
@@ -1067,7 +1088,7 @@ function afficherMnemo(item) {
 //   sans rien inventer.
 // ============================================================
 
-const CHAMPS_PAYS = "name,cca3,region,subregion,flags,capital,translations,borders,landlocked,area";
+const CHAMPS_PAYS = "name,cca2,cca3,region,subregion,flags,capital,translations,borders,landlocked,area";
 const URL_PAYS = "https://restcountries.com/v3.1/all?fields=" + CHAMPS_PAYS;
 const URL_PAYS_MINIMAL = "https://restcountries.com/v3.1/all?fields=name,cca3,region,flags,capital,translations";
 
@@ -1633,11 +1654,16 @@ function construireMonde(worldGeojson, apiData) {
     db = db.filter(i => !['flag', 'cap', 'country'].includes(i.type));   // pas de doublons si on retente
     apiData.forEach(c => {
         const info = WORLD_INFO[c.cca3]; if(!info) return;
+        // Sans capitale, c'est un territoire inhabité (île Bouvet, Terres
+        // australes, Antarctique...) : aucun intérêt dans un quiz.
+        if(!info.capitale) return;
         let dom = c.region === "Europe" ? "europe" : "monde";
         // "Trouver le pays sur la carte" n'a de sens que si on a son tracé
         let hasSvg = !!(worldGeojson && worldGeojson.features.some(f => f.id === c.cca3));
-        db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
-        if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
+        // Les fichiers du dépôt sont nommés par le code à trois lettres
+        const drapeaux = [`drapeaux/${c.cca3.toLowerCase()}.png`, c.flags && c.flags.svg].filter(Boolean);
+        db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: drapeaux, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
+        db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
         if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
     });
 
