@@ -121,14 +121,29 @@ function fetchWithTimeout(promise, ms = 6000) {
     });
 }
 
-function preloadImage(url) { 
-    return new Promise((resolve) => { 
-        const img = new Image(); 
-        let timer = setTimeout(() => { resolve("https://placehold.co/600x400/10b981/ffffff?text=Image+Introuvable"); }, 3000);
-        img.onload = () => { clearTimeout(timer); resolve(url); }; 
-        img.onerror = () => { clearTimeout(timer); resolve(`https://placehold.co/600x400/10b981/ffffff?text=Erreur`); }; 
-        img.src = url; 
-    }); 
+// Image de remplacement dessinée sur place : aucun service tiers à
+// joindre, donc elle s'affiche même sans réseau.
+const IMAGE_INDISPO = "data:image/svg+xml;utf8," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+        <rect width="600" height="400" rx="16" fill="#e2e8f0"/>
+        <rect x="210" y="150" width="180" height="120" rx="14" fill="none" stroke="#94a3b8" stroke-width="8"/>
+        <circle cx="300" cy="210" r="34" fill="none" stroke="#94a3b8" stroke-width="8"/>
+        <rect x="258" y="128" width="84" height="26" rx="8" fill="#94a3b8"/>
+        <text x="300" y="330" font-family="sans-serif" font-size="30" font-weight="bold" fill="#64748b" text-anchor="middle">Photo indisponible</text>
+    </svg>`);
+
+// Renvoie { url, ok } : l'appelant doit savoir si la photo est bien là.
+function preloadImage(url) {
+    return new Promise((resolve) => {
+        if (!url) return resolve({ url: IMAGE_INDISPO, ok: false });
+        const img = new Image();
+        let fini = false;
+        const terminer = (ok) => { if (fini) return; fini = true; clearTimeout(timer); resolve({ url: ok ? url : IMAGE_INDISPO, ok }); };
+        const timer = setTimeout(() => terminer(false), 8000);   // 3 s, c'était court en 4G
+        img.onload = () => terminer(true);
+        img.onerror = () => terminer(false);
+        img.src = url;
+    });
 }
 
 function safeSetText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
@@ -204,7 +219,7 @@ const URLS_MONDE = [
     "https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/DATA/world.geojson"
 ];
 
-let carteChargee = false, mondeCharge = false, zoomPret = false;
+let carteChargee = false, mondeCharge = false, zoomPret = false, essaisMonde = 0;
 
 // Essaie chaque miroir à son tour. Ne lève jamais : renvoie null si tout échoue.
 async function chargerJSON(urls, ms) {
@@ -215,9 +230,23 @@ async function chargerJSON(urls, ms) {
     return null;
 }
 
-// Les pays : d'abord la version complète (frontières, superficie...),
-// sinon la version minimale. Renvoie [] si l'API ne répond pas.
+// L'adresse du drapeau se déduit du code à deux lettres (même source que
+// celle que renvoyait l'API).
+function urlDrapeau(cca2) { return cca2 ? `https://flagcdn.com/w640/${cca2.toLowerCase()}.png` : ""; }
+
+// Les pays viennent d'abord du fichier embarqué dans le dépôt : même
+// origine que l'appli, donc toujours disponible, même quand l'API
+// publique est lente, bloquée ou en panne. Elle ne sert plus que de
+// secours si le fichier venait à manquer.
 async function chargerPays(ms) {
+    try {
+        const res = await fetchWithTimeout(fetch("pays.json"), ms);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length) {
+            return data.map(c => ({ ...c, flags: { svg: urlDrapeau(c.cca2) } }));
+        }
+    } catch (e) { /* on passe à l'API */ }
+
     for (const url of [URL_PAYS, URL_PAYS_MINIMAL]) {
         try {
             const res = await fetchWithTimeout(fetch(url), ms);
@@ -246,8 +275,10 @@ async function loadDataAndMap() {
     // La France est là mais pas le monde : on ne retente que ce qui manque,
     // au lieu de rester bloqué sans pays ni capitales pour toute la session.
     if (carteChargee && !mondeCharge) {
-        const [geoMonde, pays] = await Promise.all([chargerJSON(URLS_MONDE, 15000), chargerPays(15000)]);
-        if (geoMonde && pays.length) {
+        if (essaisMonde >= 3) return true;   // on n'insiste pas à chaque partie
+        essaisMonde++;
+        const [geoMonde, pays] = await Promise.all([chargerJSON(URLS_MONDE, 8000), chargerPays(8000)]);
+        if (pays.length) {
             construireMonde(geoMonde, pays);
             appliquerProgression();
             refreshDailyInfo(); calculerEtAfficherStats();
@@ -295,8 +326,13 @@ async function loadDataAndMap() {
     d3.select("#g-departements").selectAll("path").data(geojsonDep.features).enter().append("path").attr("d", pathFR).attr("class", "departement").attr("id", d => "geo_dep_" + d.properties.code).on("click", function() { handleMapClick(this, this.id); });
     d3.select("#g-regions-outlines").selectAll("path").data(geojsonReg.features).enter().append("path").attr("d", pathFR).attr("class", "region-outline");
 
-    // Le monde est un bonus : s'il manque, la France se joue quand même
-    if (worldGeojson && apiData.length) construireMonde(worldGeojson, apiData);
+    // Le monde est un bonus : s'il manque, la France se joue quand même.
+    // Les capitales et les drapeaux n'ont pas besoin du fond de carte :
+    // ils se construisent dès que les données des pays sont là.
+    if (apiData.length) {
+        construireMonde(worldGeojson, apiData);
+        if (!worldGeojson) showToast("Le tracé de la carte du monde n'est pas arrivé : capitales et drapeaux restent jouables.", "#f59e0b", "🌍");
+    }
     else showToast("Les données du monde n'ont pas répondu : la France reste jouable.", "#f59e0b", "🌍");
 
     const lineFleuve = d3.line().x(d => projFR(d)[0]).y(d => projFR(d)[1]).curve(d3.curveCatmullRom);
@@ -655,10 +691,17 @@ function askQuestion() {
     if (current.type === 'pla' || current.type === 'flag') {
         safeSetText('q-target', "Chargement..."); 
         document.getElementById('interface-image').style.display = 'flex';
-        preloadImage(current.image).then(safeUrl => { 
-            document.getElementById('botany-img').src = safeUrl; 
-            safeSetText('q-target', current.type === 'flag' ? "Quel est ce pays ?" : "Quelle est cette plante ?"); 
-            safeSetText('q-question', gameMode === 'revision' ? "Observe attentivement." : "Observe l'image..."); 
+        preloadImage(current.image).then(res => { 
+            document.getElementById('botany-img').src = res.url; 
+            if (res.ok) {
+                safeSetText('q-target', current.type === 'flag' ? "Quel est ce pays ?" : "Quelle est cette plante ?"); 
+                safeSetText('q-question', gameMode === 'revision' ? "Observe attentivement." : "Observe l'image..."); 
+            } else {
+                // Sans la photo, la question n'a plus de sens : on la transforme
+                // en fiche à mémoriser plutôt que de laisser un cadre vide.
+                safeSetText('q-target', current.nom); 
+                safeSetText('q-question', "La photo n'a pas pu être chargée. Retiens au moins le nom !"); 
+            }
             showFlashUI(); 
         });
     } 
@@ -1582,7 +1625,7 @@ async function lancerDefi() { if (!defiRecu) return; await launchGame('defi'); }
 // Le monde (pays, capitales, drapeaux) se construit à part : il peut
 // arriver après coup, quand une première tentative a échoué.
 function construireMonde(worldGeojson, apiData) {
-    geoWorld = worldGeojson;
+    geoWorld = worldGeojson || null;
     construireInfosMonde(apiData);
     const projWorld = d3.geoMercator().scale(80).translate([250, 320]);
     const pathWorld = d3.geoPath().projection(projWorld);
@@ -1591,15 +1634,19 @@ function construireMonde(worldGeojson, apiData) {
     apiData.forEach(c => {
         const info = WORLD_INFO[c.cca3]; if(!info) return;
         let dom = c.region === "Europe" ? "europe" : "monde";
-        let hasSvg = worldGeojson.features.some(f => f.id === c.cca3);
+        // "Trouver le pays sur la carte" n'a de sens que si on a son tracé
+        let hasSvg = !!(worldGeojson && worldGeojson.features.some(f => f.id === c.cca3));
         db.push({ id: "fl_" + c.cca3, domaine: dom, type: "flag", nom: info.nom, image: c.flags.svg, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
         if(info.capitale) db.push({ id: "cap_" + c.cca3, domaine: dom, type: "cap", nom: info.capitale, contexte: `Capitale : ${info.nom}`, pays: info.nom, zone: info.zone, sr: info.sousRegion });
         if(hasSvg) db.push({ id: "w_" + c.cca3, domaine: dom, type: "country", nom: info.nom, contexte: info.zone, zone: info.zone, sr: info.sousRegion });
     });
 
     d3.select("#g-world").selectAll("*").remove();
-    d3.select("#g-world").selectAll("path").data(worldGeojson.features).enter().append("path").attr("d", pathWorld).attr("class", "pays-monde").attr("id", d => "w_" + d.id).on("click", function(e, d) { handleMapClick(this, "w_" + d.id); });
-    mondeCharge = true;
+    if (worldGeojson) {
+        d3.select("#g-world").selectAll("path").data(worldGeojson.features).enter().append("path").attr("d", pathWorld).attr("class", "pays-monde").attr("id", d => "w_" + d.id).on("click", function(e, d) { handleMapClick(this, "w_" + d.id); });
+    }
+    // Complet seulement avec le fond de carte : sinon on retentera plus tard
+    mondeCharge = !!worldGeojson;
 }
 
 // Réapplique les réussites et les erreurs enregistrées sur la base en mémoire
