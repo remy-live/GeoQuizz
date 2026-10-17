@@ -579,6 +579,8 @@ function endGameChrono() {
 function askQuestion() {
     if (svgElement) { svgElement.interrupt(); }
     clearPendingNext();
+    // Nouvelle question : on repart du haut de l'écran
+    const vueJeu = document.getElementById('v-game'); if (vueJeu) vueJeu.scrollTop = 0;
 
     if(lives > 0) safeSetText('lives-ui', "❤️".repeat(lives)); else if (lives === -1) safeSetText('lives-ui', "♾️"); else safeSetText('lives-ui', "💀");
     d3.select("#target-pointer").attr("display", "none");
@@ -670,7 +672,9 @@ function askQuestion() {
         // La frise chronologique n'a rien à faire sur une question de capitale
         document.getElementById('timeline-ui').style.display = current.type === 'his' ? 'flex' : 'none';
         document.querySelectorAll('.t-period').forEach(el => el.classList.remove('active'));
-        if(current.periode !== undefined) document.getElementById('tp-' + current.periode).classList.add('active');
+        // Garde-fou : une période sans case dans la frise ne doit pas tout arrêter
+        const casePeriode = current.periode !== undefined ? document.getElementById('tp-' + current.periode) : null;
+        if(casePeriode) casePeriode.classList.add('active');
         showFlashUI();
     }
     else {

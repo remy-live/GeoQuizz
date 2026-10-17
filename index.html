@@ -22,17 +22,19 @@
 </head>
 <body>
 
+<div id="app">
+
     <div id="v-home" class="view active">
         <div class="header">
             <div>
                 <h1>LearnDaily</h1>
                 <p class="subtitle" id="home-streak">Mon Atlas Personnel</p>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button id="pwa-btn" class="nav-btn" onclick="installerPWA()" style="display: none; font-size: 1.5rem; padding: 5px; flex: none;" title="Installer l'app">📥</button>
-                <button class="nav-btn" onclick="openSettings()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Gérer mes Matières">⚙️</button>
-                <button id="sound-btn" class="nav-btn" onclick="toggleSon()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Son">🔊</button>
-                <button id="theme-btn" class="nav-btn" onclick="toggleTheme()" style="font-size: 1.5rem; padding: 5px; flex: none;" title="Thème">🌙</button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="pwa-btn" class="nav-btn" onclick="installerPWA()" style="display: none; font-size: 1.25rem; padding: 4px; flex: none;" title="Installer l'app">📥</button>
+                <button class="nav-btn" onclick="openSettings()" style="font-size: 1.25rem; padding: 4px; flex: none;" title="Gérer mes Matières">⚙️</button>
+                <button id="sound-btn" class="nav-btn" onclick="toggleSon()" style="font-size: 1.25rem; padding: 4px; flex: none;" title="Son">🔊</button>
+                <button id="theme-btn" class="nav-btn" onclick="toggleTheme()" style="font-size: 1.25rem; padding: 4px; flex: none;" title="Thème">🌙</button>
             </div>
         </div>
 
@@ -174,21 +176,22 @@
             ⏱️ <span id="timer-val">60</span>s
         </div>
 
-        <div id="interface-texte" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 20px;">
+        <div id="interface-texte" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 10px;">
             <div class="card" style="width: 100%; text-align: center;">
                 <div class="date-badge" id="txt-date">1515</div>
                 <p id="text-prompt" style="font-size: 1.2rem; font-weight: 600; margin: 20px 0;">Texte de la question</p>
                 <div class="timeline" id="timeline-ui">
-                    <div class="t-period" id="tp-1">Antiquité</div>
-                    <div class="t-period" id="tp-2">Moyen Âge</div>
-                    <div class="t-period" id="tp-3">Renaissance</div>
-                    <div class="t-period" id="tp-4">Temps Modernes</div>
-                    <div class="t-period" id="tp-5">Époque Contemp.</div>
+                    <div class="t-period" id="tp-0">Origines</div>
+                    <div class="t-period" id="tp-1">Préhist.</div>
+                    <div class="t-period" id="tp-2">Antiquité</div>
+                    <div class="t-period" id="tp-3">Moyen Âge</div>
+                    <div class="t-period" id="tp-4">Temps mod.</div>
+                    <div class="t-period" id="tp-5">Contemp.</div>
                 </div>
             </div>
         </div>
 
-        <div id="interface-image" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 20px; overflow: hidden;">
+        <div id="interface-image" class="interface-wrapper" style="display:none; flex: 1; justify-content: center; align-items: center; padding: 20px;">
             <div class="image-container" style="width: 100%; max-width: 400px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;">
                 <img id="botany-img" src="" alt="Question" style="width: 100%; height: auto; display: block; object-fit: cover; aspect-ratio: 4/3;">
             </div>
@@ -244,6 +247,8 @@
         <div class="nav-btn" id="nav-atlas" onclick="launchGame('atlas')"><i>🗺️</i>Atlas</div>
         <div class="nav-btn" id="nav-stats" onclick="switchTab('stats')"><i>📈</i>Stats</div>
     </div>
+
+</div>
 
     <div class="modal" id="settings-modal" style="display: none;">
         <div class="modal-content">
